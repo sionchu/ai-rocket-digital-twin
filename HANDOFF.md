@@ -21,5 +21,6 @@ python -m pip install -e ".[test]"
 python -m rocket_dt validate-physics
 python -m rocket_dt experiments --n-suite 30
 python scripts/run_cfd_batch.py --engines conical_A bell_B --levels 1 2 3 --jobs 4 --out runs/cfd
+python scripts/run_cfd_batch.py --post-only --out runs/cfd   # QA/GCI/맵만 다시 계산
 python scripts/run_cfd_experiments.py          # CFD 맵 vs 1D 맵 비행 비교
 ```

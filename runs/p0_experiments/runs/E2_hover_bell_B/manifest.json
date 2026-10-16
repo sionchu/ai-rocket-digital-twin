@@ -12,7 +12,7 @@
   "python": "3.13.16",
   "numpy": "2.5.3",
   "scipy": "1.18.1",
-  "rocket_dt_commit": "45e3942"
+  "rocket_dt_commit": "ae60d0d"
  },
  "seed": null,
  "frame_convention": "world_Z_up_body_Z_forward",

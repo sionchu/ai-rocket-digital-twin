@@ -1,0 +1,10 @@
+{
+ "command": "validate-physics",
+ "returncode": 0,
+ "software": {
+  "python": "3.13.16",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "rocket_dt_commit": "ae60d0d-dirty"
+ }
+}

@@ -1,6 +1,6 @@
 # P0 experiment summary
 
-Label: **ideal-1D map (not CFD-verified), Python RK4 reference integrator, PD baseline**. Commit `45e3942`.
+Label: **ideal-1D map (not CFD-verified), Python RK4 reference integrator, PD baseline**. Commit `ae60d0d`.
 
 ## E0 open-loop sensitivity (throttle 1.0, gimbal_y 0.035 rad, sea level, full tanks)
 
@@ -51,7 +51,15 @@ Label: **ideal-1D map (not CFD-verified), Python RK4 reference integrator, PD ba
 | bell_B | 30/30 | [0.89, 1.00] | 30/30 | 0.35/0.71/0.84 | 0.83 | 0.75 | 6.45 | 78.7/93.0 | - |
 | bell_C | 30/30 | [0.89, 1.00] | 0/30 | 0.35/0.71/0.84 | 0.83 | 0.76 | 6.50 | 82.1/97.1 | - |
 
-## S3 randomized landing suite, PD baseline, rcs_01 + rcs_03 failed (no +roll authority) (seeds 1000–1029)
+## S3 randomized landing suite, PD baseline, rcs_01 + rcs_03 failed (no +roll authority), fault known (seeds 1000–1029)
+
+| engine | success | Wilson 95% | success & physics-valid | td pos err median/P95/max [m] | td |vz| P95 | td vh P95 | max td tilt [deg] | fuel mean/P95 [kg] | failure reasons |
+|---|---|---|---|---|---|---|---|---|---|
+| conical_A | 30/30 | [0.89, 1.00] | 30/30 | 0.43/0.70/0.86 | 0.85 | 0.77 | 6.69 | 78.7/93.1 | - |
+| bell_B | 30/30 | [0.89, 1.00] | 30/30 | 0.43/0.70/0.86 | 0.83 | 0.78 | 6.68 | 78.6/92.9 | - |
+| bell_C | 30/30 | [0.89, 1.00] | 0/30 | 0.43/0.70/0.86 | 0.85 | 0.78 | 6.73 | 81.9/96.9 | - |
+
+## S3 randomized landing suite, PD baseline, rcs_01 + rcs_03 failed silently (no fault detection) (seeds 1000–1029)
 
 | engine | success | Wilson 95% | success & physics-valid | td pos err median/P95/max [m] | td |vz| P95 | td vh P95 | max td tilt [deg] | fuel mean/P95 [kg] | failure reasons |
 |---|---|---|---|---|---|---|---|---|---|

@@ -115,3 +115,28 @@ def test_control_authority(vehicle):
     failed = np.array([True, False, True, False])  # both +roll thrusters out
     degraded = authority_report(vehicle, com, F, rcs_failed=failed)
     assert not degraded.full_authority and "tau_z" in degraded.missing
+
+
+def test_e0_matches_hand_calculation():
+    """E0 numbers must equal independent hand formulas: a_z = F cos(dy)/m - g0, alpha_y = tau_y / I_yy."""
+    from pathlib import Path
+
+    from rocket_dt.dynamics.frames import G0
+    from rocket_dt.evaluation.experiments import e0_sensitivity
+
+    rows = e0_sensitivity(Path(__file__).resolve().parents[1], throttle=1.0, gimbal_rad=(0.0, 0.035))
+    for r in rows:
+        m = None
+        # recover mass from the reported engine/CoM data via the same vehicle file
+        from rocket_dt.dynamics.mass import MassModel
+        from rocket_dt.schemas import load_engine, load_vehicle
+        root = Path(__file__).resolve().parents[1]
+        v = load_vehicle(root / "configs/vehicle_v0.yaml").with_engine(r["engine"])
+        ms = MassModel(v, load_engine(root / f"configs/engines/{r['engine']}.yaml")).evaluate(450.0, 10.0)
+        m = ms.mass_kg
+        lever = ms.com_body_m[2] - (-3.0)
+        assert r["acc_z_m_s2"] == pytest.approx(r["thrust_n"] * np.cos(0.035) / m - G0, rel=1e-9)
+        tau_y = -lever * r["thrust_n"] * np.sin(0.035)
+        assert r["ang_acc_y_rad_s2"] == pytest.approx(tau_y / ms.inertia_com_body[1, 1], rel=1e-6)
+    a, b, c = (next(x for x in rows if x["engine"] == n) for n in ("conical_A", "bell_B", "bell_C"))
+    assert c["acc_z_m_s2"] < a["acc_z_m_s2"] < b["acc_z_m_s2"]  # design change propagates to vehicle response

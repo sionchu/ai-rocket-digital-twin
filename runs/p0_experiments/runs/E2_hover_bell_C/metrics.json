@@ -1,0 +1,19 @@
+{
+ "scenario": "hover_20m",
+ "termination_reason": "completed",
+ "duration_s": 20.000000000000306,
+ "fuel_used_kg": 108.75742682553056,
+ "rcs_gas_used_kg": 0.21963118433365736,
+ "engine_mass_kg": 48.69580577786324,
+ "dry_mass_kg": 748.6958057778633,
+ "max_tilt_deg": 5.175771472565466,
+ "gimbal_saturation_frac": 0.0,
+ "map_invalid_steps": 4000,
+ "physics_valid": false,
+ "mean_throttle_engine_on": 0.6376980522800197,
+ "mean_thrust_n": 11330.996250123733,
+ "pos_rms_m": 0.2142988113928963,
+ "alt_rms_m": 0.023682061777260868,
+ "tilt_rms_deg": 2.3145581110199696,
+ "success": true
+}

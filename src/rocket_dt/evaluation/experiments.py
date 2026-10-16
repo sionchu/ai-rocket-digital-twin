@@ -22,16 +22,24 @@ from rocket_dt.dynamics.mass import MassModel
 from rocket_dt.dynamics.reference_6dof import IDX_V, IDX_W, Reference6DoF, StepInputs, make_state
 from rocket_dt.evaluation.simulate import Scenario, run_scenario
 from rocket_dt.propulsion.adapter import ActuatorState, PropulsionAdapter
-from rocket_dt.propulsion.performance_map import build_ideal_map
+from rocket_dt.propulsion.performance_map import EnginePerformanceMap, build_ideal_map
 from rocket_dt.schemas import load_engine, load_vehicle
 
 ENGINES = ("conical_A", "bell_B", "bell_C")
 
 
-def load_all(root: Path):
+def load_all(root: Path, map_source: str = "ideal1d"):
+    """map_source 'ideal1d' builds 1D maps; 'cfd' loads QA-passed CFD maps where they exist (others skipped)."""
     veh = load_vehicle(root / "configs/vehicle_v0.yaml")
     eng = {n: load_engine(root / f"configs/engines/{n}.yaml") for n in ENGINES}
-    maps = {n: build_ideal_map(e) for n, e in eng.items()}
+    if map_source == "ideal1d":
+        maps = {n: build_ideal_map(e) for n, e in eng.items()}
+    else:
+        maps = {}
+        for n in ENGINES:
+            path = root / "runs/cfd/maps" / f"{n}_cfd.json"
+            if path.exists():
+                maps[n] = EnginePerformanceMap.load(path)
     return veh, eng, maps
 
 
@@ -60,8 +68,8 @@ def _load_sc(root: Path, name: str) -> Scenario:
 
 
 def _job(args):
-    root, exp, n, scen_name, sc = args
-    veh, eng, maps = load_all(root)
+    root, exp, n, scen_name, sc = args[:5]
+    veh, eng, maps = load_all(root, args[5] if len(args) > 5 else "ideal1d")
     mass_engine = eng["conical_A"] if exp == "E1" else eng[n]
     log, met, ep = run_scenario(sc, veh, mass_engine, eng[n], maps[n])
     return {"experiment": exp, "engine": n, "scenario": scen_name, "metrics": met,
@@ -102,15 +110,16 @@ def wilson(k: int, n: int, z: float = 1.96):
     return (max(0.0, c - h), min(1.0, c + h))
 
 
-def landing_suite(root: Path, n: int = 30, workers: int = 4, seed0: int = 1000, rcs_failed=()):
+def landing_suite(root: Path, n: int = 30, workers: int = 4, seed0: int = 1000, rcs_failed=(),
+                  map_source: str = "ideal1d", engines=ENGINES):
     base = _load_sc(root, "landing")
     base = replace(base, rcs_failed=list(rcs_failed))
     scs = randomized_scenarios(base, n, seed0)
-    jobs = [(root, "S3", e, sc.name, sc) for e in ENGINES for sc in scs]
+    jobs = [(root, "S3", e, sc.name, sc, map_source) for e in engines for sc in scs]
     with ProcessPoolExecutor(workers) as ex:
         res = [r[0] for r in ex.map(_job, jobs)]
     summary = {}
-    for e in ENGINES:
+    for e in engines:
         ms = [r["metrics"] for r in res if r["engine"] == e]
         succ = [m["success"] for m in ms]
         td = [m["touchdown"] for m in ms if m["touchdown"]]
@@ -131,3 +140,15 @@ def landing_suite(root: Path, n: int = 30, workers: int = 4, seed0: int = 1000, 
             "failure_reasons": sorted({fr for m in ms for fr in m.get("failure_reasons", [])}),
         }
     return res, summary
+
+
+def cfd_vs_1d(root: Path, workers: int = 4, n_suite: int = 30):
+    """Same scenarios with the 1D map and the CFD-derived map for each engine that has one."""
+    _, _, cmaps = load_all(root, "cfd")
+    names = tuple(cmaps)
+    jobs = [(root, f"CFD:{src}", n, s, _load_sc(root, s), src) for src in ("ideal1d", "cfd") for n in names
+            for s in ("hover", "landing")]
+    with ProcessPoolExecutor(workers) as ex:
+        rows = [r[0] for r in ex.map(_job, jobs)]
+    suites = {src: landing_suite(root, n_suite, workers, map_source=src, engines=names)[1] for src in ("ideal1d", "cfd")}
+    return rows, suites

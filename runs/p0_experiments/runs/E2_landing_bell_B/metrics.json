@@ -1,0 +1,26 @@
+{
+ "scenario": "descent_landing_60m",
+ "termination_reason": "landed",
+ "duration_s": 17.16000000000087,
+ "fuel_used_kg": 77.24077308055945,
+ "rcs_gas_used_kg": 0.08785247373346294,
+ "engine_mass_kg": 46.79015488020359,
+ "dry_mass_kg": 746.7901548802035,
+ "max_tilt_deg": 11.890365783785462,
+ "gimbal_saturation_frac": 0.0,
+ "map_invalid_steps": 0,
+ "physics_valid": true,
+ "mean_throttle_engine_on": 0.6387664192553159,
+ "mean_thrust_n": 11990.693715532821,
+ "touchdown": {
+  "t": 14.175000000000816,
+  "vz": -0.8139265897088377,
+  "vh": 0.5120877657302967,
+  "tilt": 0.05406387356788384,
+  "pos_err": 0.28913668639495704,
+  "omega": 0.10185201184515943
+ },
+ "success": true,
+ "failure_reasons": [],
+ "final_tilt_deg": 0.07398012100203524
+}

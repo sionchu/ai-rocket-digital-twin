@@ -1,0 +1,25 @@
+{
+ "run_id": "E2_landing_bell_B",
+ "command": "experiments",
+ "engine_design_ids": [
+  "bell_B"
+ ],
+ "vehicle_hash": "61b39afe3528f314",
+ "map_hashes": {
+  "bell_B": "bea0825fb86c3ba9"
+ },
+ "software": {
+  "python": "3.13.16",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "rocket_dt_commit": "d1f964b"
+ },
+ "seed": null,
+ "frame_convention": "world_Z_up_body_Z_forward",
+ "units": "SI",
+ "integrator": "python_rk4_reference",
+ "extra": {
+  "mass_engine_id": "bell_B",
+  "label": "ideal-1D map (not CFD-verified), Python RK4 reference integrator, PD baseline"
+ }
+}

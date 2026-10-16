@@ -4,3 +4,4 @@ __pycache__/
 runs/**/trajectory.npz
 runs/cfd_cases/
 *.egg-info/
+runs/cfd/*_L*/

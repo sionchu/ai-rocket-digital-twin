@@ -1,0 +1,58 @@
+{
+ "scenario": {
+  "name": "descent_landing_60m",
+  "mode": "landing",
+  "duration_s": 60.0,
+  "com_position_w": [
+   6.0,
+   -4.0,
+   60.0
+  ],
+  "velocity_w": [
+   1.0,
+   0.5,
+   -6.0
+  ],
+  "tilt_axis": [
+   0.0,
+   1.0,
+   0.0
+  ],
+  "tilt_rad": 0.05,
+  "omega_b": [
+   0.0,
+   0.0,
+   0.1
+  ],
+  "target_w": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "physics_hz": 200.0,
+  "control_hz": 50.0,
+  "settle_s": 3.0,
+  "disturbance_force_w": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "disturbance_torque_b": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "rcs_failed": [],
+  "seed": 0,
+  "propellant_mass_kg": null
+ },
+ "vehicle_engine_id": "bell_C",
+ "mass_engine_id": "conical_A",
+ "map_hash": "8b8641b5c9621595",
+ "events": [
+  [
+   14.165000000000814,
+   "touchdown_engine_cutoff"
+  ]
+ ]
+}

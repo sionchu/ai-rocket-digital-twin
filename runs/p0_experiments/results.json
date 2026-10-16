@@ -1,0 +1,554 @@
+{
+ "label": "ideal-1D map (not CFD-verified), Python RK4 reference integrator, PD baseline",
+ "software": {
+  "python": "3.13.16",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "rocket_dt_commit": "d1f964b"
+ },
+ "vehicle_hash": "61b39afe3528f314",
+ "E0": [
+  {
+   "engine": "conical_A",
+   "thrust_n": 19846.22901996586,
+   "mdot_kg_s": 8.5269263305024,
+   "engine_mass_kg": 47.185994835839175,
+   "com_z_m": -0.2276140989647705,
+   "Ixx_kg_m2": 4016.01741909126,
+   "acc_z_m_s2": 6.623357082913324,
+   "ang_acc_y_rad_s2": -0.4794192461574674,
+   "map_valid": true
+  },
+  {
+   "engine": "bell_B",
+   "thrust_n": 19886.136687108858,
+   "mdot_kg_s": 8.5269263305024,
+   "engine_mass_kg": 46.79015488020359,
+   "com_z_m": -0.22657287554791017,
+   "Ixx_kg_m2": 4012.030132751321,
+   "acc_z_m_s2": 6.6617953145141104,
+   "ang_acc_y_rad_s2": -0.48104130054229877,
+   "map_valid": true
+  },
+  {
+   "engine": "bell_C",
+   "thrust_n": 19690.197501307906,
+   "mdot_kg_s": 8.5269263305024,
+   "engine_mass_kg": 48.69580577786324,
+   "com_z_m": -0.2315650238658251,
+   "Ixx_kg_m2": 4031.099521990297,
+   "acc_z_m_s2": 6.473822218379389,
+   "ang_acc_y_rad_s2": -0.4731951139987783,
+   "map_valid": true
+  }
+ ],
+ "E1_E2": [
+  {
+   "experiment": "E1",
+   "engine": "conical_A",
+   "scenario": "hover",
+   "metrics": {
+    "scenario": "hover_20m",
+    "termination_reason": "completed",
+    "duration_s": 20.000000000000306,
+    "fuel_used_kg": 104.0557540149727,
+    "rcs_gas_used_kg": 0.21963118433365736,
+    "engine_mass_kg": 47.185994835839175,
+    "dry_mass_kg": 747.1859948358392,
+    "max_tilt_deg": 5.19441671737119,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6101183221241218,
+    "mean_thrust_n": 11338.957434128159,
+    "pos_rms_m": 0.21390168768219162,
+    "alt_rms_m": 0.023495472798491398,
+    "tilt_rms_deg": 2.3109786930488263,
+    "success": true
+   },
+   "map_hash": "b337fd547e15ef5c",
+   "mass_engine": "conical_A"
+  },
+  {
+   "experiment": "E1",
+   "engine": "conical_A",
+   "scenario": "landing",
+   "metrics": {
+    "scenario": "descent_landing_60m",
+    "termination_reason": "landed",
+    "duration_s": 17.16000000000087,
+    "fuel_used_kg": 77.4001871306811,
+    "rcs_gas_used_kg": 0.08785247373346294,
+    "engine_mass_kg": 47.185994835839175,
+    "dry_mass_kg": 747.1859948358392,
+    "max_tilt_deg": 11.889461107755176,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6400854694885312,
+    "mean_thrust_n": 11993.999310673922,
+    "touchdown": {
+     "t": 14.175000000000816,
+     "vz": -0.8138919492689517,
+     "vh": 0.5132614373726289,
+     "tilt": 0.054053656249234125,
+     "pos_err": 0.28907861432725557,
+     "omega": 0.10204730702736656
+    },
+    "success": true,
+    "failure_reasons": [],
+    "final_tilt_deg": 0.07372326996387127
+   },
+   "map_hash": "b337fd547e15ef5c",
+   "mass_engine": "conical_A"
+  },
+  {
+   "experiment": "E1",
+   "engine": "bell_B",
+   "scenario": "hover",
+   "metrics": {
+    "scenario": "hover_20m",
+    "termination_reason": "completed",
+    "duration_s": 20.000000000000306,
+    "fuel_used_kg": 103.87313865614641,
+    "rcs_gas_used_kg": 0.21963118433365736,
+    "engine_mass_kg": 47.185994835839175,
+    "dry_mass_kg": 747.1859948358392,
+    "max_tilt_deg": 5.1958719718883195,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6090471461344663,
+    "mean_thrust_n": 11339.877016429282,
+    "pos_rms_m": 0.2139401778917213,
+    "alt_rms_m": 0.0234988285160746,
+    "tilt_rms_deg": 2.311420345548014,
+    "success": true
+   },
+   "map_hash": "bea0825fb86c3ba9",
+   "mass_engine": "conical_A"
+  },
+  {
+   "experiment": "E1",
+   "engine": "bell_B",
+   "scenario": "landing",
+   "metrics": {
+    "scenario": "descent_landing_60m",
+    "termination_reason": "landed",
+    "duration_s": 17.16000000000087,
+    "fuel_used_kg": 77.26294829465434,
+    "rcs_gas_used_kg": 0.08785247373346294,
+    "engine_mass_kg": 47.185994835839175,
+    "dry_mass_kg": 747.1859948358392,
+    "max_tilt_deg": 11.890195716512688,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6389499068965635,
+    "mean_thrust_n": 11994.706805634267,
+    "touchdown": {
+     "t": 14.175000000000816,
+     "vz": -0.8139910910851095,
+     "vh": 0.5133452987382815,
+     "tilt": 0.05403420973414171,
+     "pos_err": 0.2889883492322042,
+     "omega": 0.10207513841467651
+    },
+    "success": true,
+    "failure_reasons": [],
+    "final_tilt_deg": 0.07373596293620063
+   },
+   "map_hash": "bea0825fb86c3ba9",
+   "mass_engine": "conical_A"
+  },
+  {
+   "experiment": "E1",
+   "engine": "bell_C",
+   "scenario": "hover",
+   "metrics": {
+    "scenario": "hover_20m",
+    "termination_reason": "completed",
+    "duration_s": 20.000000000000306,
+    "fuel_used_kg": 108.65035657665356,
+    "rcs_gas_used_kg": 0.21963118433365736,
+    "engine_mass_kg": 47.185994835839175,
+    "dry_mass_kg": 747.1859948358392,
+    "max_tilt_deg": 5.167170636748619,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 4000,
+    "physics_valid": false,
+    "mean_throttle_engine_on": 0.6370699963091461,
+    "mean_thrust_n": 11316.491664725952,
+    "pos_rms_m": 0.21305838730772436,
+    "alt_rms_m": 0.023348587616989446,
+    "tilt_rms_deg": 2.30139683260245,
+    "success": true
+   },
+   "map_hash": "8b8641b5c9621595",
+   "mass_engine": "conical_A"
+  },
+  {
+   "experiment": "E1",
+   "engine": "bell_C",
+   "scenario": "landing",
+   "metrics": {
+    "scenario": "descent_landing_60m",
+    "termination_reason": "landed",
+    "duration_s": 17.16000000000087,
+    "fuel_used_kg": 80.49156264386562,
+    "rcs_gas_used_kg": 0.08785247373346294,
+    "engine_mass_kg": 47.185994835839175,
+    "dry_mass_kg": 747.1859948358392,
+    "max_tilt_deg": 11.88031417273374,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 2415,
+    "physics_valid": false,
+    "mean_throttle_engine_on": 0.6656667230750822,
+    "mean_thrust_n": 11978.276024012523,
+    "touchdown": {
+     "t": 14.165000000000814,
+     "vz": -0.8300115241801358,
+     "vh": 0.5158932952826978,
+     "tilt": 0.05546321324717654,
+     "pos_err": 0.29592557386168034,
+     "omega": 0.10454326386542963
+    },
+    "success": true,
+    "failure_reasons": [],
+    "final_tilt_deg": 0.07376173417898546
+   },
+   "map_hash": "8b8641b5c9621595",
+   "mass_engine": "conical_A"
+  },
+  {
+   "experiment": "E2",
+   "engine": "conical_A",
+   "scenario": "hover",
+   "metrics": {
+    "scenario": "hover_20m",
+    "termination_reason": "completed",
+    "duration_s": 20.000000000000306,
+    "fuel_used_kg": 104.0557540149727,
+    "rcs_gas_used_kg": 0.21963118433365736,
+    "engine_mass_kg": 47.185994835839175,
+    "dry_mass_kg": 747.1859948358392,
+    "max_tilt_deg": 5.19441671737119,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6101183221241218,
+    "mean_thrust_n": 11338.957434128159,
+    "pos_rms_m": 0.21390168768219162,
+    "alt_rms_m": 0.023495472798491398,
+    "tilt_rms_deg": 2.3109786930488263,
+    "success": true
+   },
+   "map_hash": "b337fd547e15ef5c",
+   "mass_engine": "conical_A"
+  },
+  {
+   "experiment": "E2",
+   "engine": "conical_A",
+   "scenario": "landing",
+   "metrics": {
+    "scenario": "descent_landing_60m",
+    "termination_reason": "landed",
+    "duration_s": 17.16000000000087,
+    "fuel_used_kg": 77.4001871306811,
+    "rcs_gas_used_kg": 0.08785247373346294,
+    "engine_mass_kg": 47.185994835839175,
+    "dry_mass_kg": 747.1859948358392,
+    "max_tilt_deg": 11.889461107755176,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6400854694885312,
+    "mean_thrust_n": 11993.999310673922,
+    "touchdown": {
+     "t": 14.175000000000816,
+     "vz": -0.8138919492689517,
+     "vh": 0.5132614373726289,
+     "tilt": 0.054053656249234125,
+     "pos_err": 0.28907861432725557,
+     "omega": 0.10204730702736656
+    },
+    "success": true,
+    "failure_reasons": [],
+    "final_tilt_deg": 0.07372326996387127
+   },
+   "map_hash": "b337fd547e15ef5c",
+   "mass_engine": "conical_A"
+  },
+  {
+   "experiment": "E2",
+   "engine": "bell_B",
+   "scenario": "hover",
+   "metrics": {
+    "scenario": "hover_20m",
+    "termination_reason": "completed",
+    "duration_s": 20.000000000000306,
+    "fuel_used_kg": 103.84356715495392,
+    "rcs_gas_used_kg": 0.21963118433365736,
+    "engine_mass_kg": 46.79015488020359,
+    "dry_mass_kg": 746.7901548802035,
+    "max_tilt_deg": 5.193619117947324,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6088736848458768,
+    "mean_thrust_n": 11336.083081676781,
+    "pos_rms_m": 0.2136243330344183,
+    "alt_rms_m": 0.02341101122911227,
+    "tilt_rms_deg": 2.308075505416436,
+    "success": true
+   },
+   "map_hash": "bea0825fb86c3ba9",
+   "mass_engine": "bell_B"
+  },
+  {
+   "experiment": "E2",
+   "engine": "bell_B",
+   "scenario": "landing",
+   "metrics": {
+    "scenario": "descent_landing_60m",
+    "termination_reason": "landed",
+    "duration_s": 17.16000000000087,
+    "fuel_used_kg": 77.24077308055945,
+    "rcs_gas_used_kg": 0.08785247373346294,
+    "engine_mass_kg": 46.79015488020359,
+    "dry_mass_kg": 746.7901548802035,
+    "max_tilt_deg": 11.890365783785462,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6387664192553159,
+    "mean_thrust_n": 11990.693715532821,
+    "touchdown": {
+     "t": 14.175000000000816,
+     "vz": -0.8139265897088377,
+     "vh": 0.5120877657302967,
+     "tilt": 0.05406387356788384,
+     "pos_err": 0.28913668639495704,
+     "omega": 0.10185201184515943
+    },
+    "success": true,
+    "failure_reasons": [],
+    "final_tilt_deg": 0.07398012100203524
+   },
+   "map_hash": "bea0825fb86c3ba9",
+   "mass_engine": "bell_B"
+  },
+  {
+   "experiment": "E2",
+   "engine": "bell_C",
+   "scenario": "hover",
+   "metrics": {
+    "scenario": "hover_20m",
+    "termination_reason": "completed",
+    "duration_s": 20.000000000000306,
+    "fuel_used_kg": 108.75742682553056,
+    "rcs_gas_used_kg": 0.21963118433365736,
+    "engine_mass_kg": 48.69580577786324,
+    "dry_mass_kg": 748.6958057778633,
+    "max_tilt_deg": 5.175771472565466,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 4000,
+    "physics_valid": false,
+    "mean_throttle_engine_on": 0.6376980522800197,
+    "mean_thrust_n": 11330.996250123733,
+    "pos_rms_m": 0.2142988113928963,
+    "alt_rms_m": 0.023682061777260868,
+    "tilt_rms_deg": 2.3145581110199696,
+    "success": true
+   },
+   "map_hash": "8b8641b5c9621595",
+   "mass_engine": "bell_C"
+  },
+  {
+   "experiment": "E2",
+   "engine": "bell_C",
+   "scenario": "landing",
+   "metrics": {
+    "scenario": "descent_landing_60m",
+    "termination_reason": "landed",
+    "duration_s": 17.16000000000087,
+    "fuel_used_kg": 80.5717897935512,
+    "rcs_gas_used_kg": 0.08785247373346294,
+    "engine_mass_kg": 48.69580577786324,
+    "dry_mass_kg": 748.6958057778633,
+    "max_tilt_deg": 11.880115621540716,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 2405,
+    "physics_valid": false,
+    "mean_throttle_engine_on": 0.6663305588679613,
+    "mean_thrust_n": 11993.606022009226,
+    "touchdown": {
+     "t": 14.165000000000814,
+     "vz": -0.8304118753382507,
+     "vh": 0.520766302958702,
+     "tilt": 0.05536329289656543,
+     "pos_err": 0.2954305094503066,
+     "omega": 0.10540085052945922
+    },
+    "success": true,
+    "failure_reasons": [],
+    "final_tilt_deg": 0.07367562350599778
+   },
+   "map_hash": "8b8641b5c9621595",
+   "mass_engine": "bell_C"
+  }
+ ],
+ "S3_nominal": {
+  "conical_A": {
+   "n": 30,
+   "n_success": 30,
+   "success_rate": 1.0,
+   "wilson95": [
+    0.8864829086095221,
+    1.0
+   ],
+   "n_physics_valid": 30,
+   "n_success_and_physics_valid": 30,
+   "td_vz_abs_p95": 0.8271340041439446,
+   "td_vh_p95": 0.7514672249013766,
+   "td_pos_err_median": 0.36452523331729125,
+   "td_pos_err_p95": 0.7052584107670224,
+   "td_pos_err_max": 0.837633427842605,
+   "td_tilt_deg_max": 6.453054180260344,
+   "fuel_mean_kg": 78.84611566420364,
+   "fuel_p95_kg": 93.14391536411665,
+   "gimbal_saturation_mean": 0.0,
+   "failure_reasons": []
+  },
+  "bell_B": {
+   "n": 30,
+   "n_success": 30,
+   "success_rate": 1.0,
+   "wilson95": [
+    0.8864829086095221,
+    1.0
+   ],
+   "n_physics_valid": 30,
+   "n_success_and_physics_valid": 30,
+   "td_vz_abs_p95": 0.8299137971469779,
+   "td_vh_p95": 0.7645277231876574,
+   "td_pos_err_median": 0.363529006410202,
+   "td_pos_err_p95": 0.7046990241873751,
+   "td_pos_err_max": 0.8373911740599502,
+   "td_tilt_deg_max": 6.446844367909374,
+   "fuel_mean_kg": 78.68713365576461,
+   "fuel_p95_kg": 92.95274241639528,
+   "gimbal_saturation_mean": 0.0,
+   "failure_reasons": []
+  },
+  "bell_C": {
+   "n": 30,
+   "n_success": 30,
+   "success_rate": 1.0,
+   "wilson95": [
+    0.8864829086095221,
+    1.0
+   ],
+   "n_physics_valid": 0,
+   "n_success_and_physics_valid": 0,
+   "td_vz_abs_p95": 0.8325397500382272,
+   "td_vh_p95": 0.7569833586563217,
+   "td_pos_err_median": 0.3668537561434866,
+   "td_pos_err_p95": 0.7094211362427972,
+   "td_pos_err_max": 0.8420580591508802,
+   "td_tilt_deg_max": 6.495295117672275,
+   "fuel_mean_kg": 82.0748892327194,
+   "fuel_p95_kg": 97.06389449105262,
+   "gimbal_saturation_mean": 0.0,
+   "failure_reasons": []
+  }
+ },
+ "S3_rcs_01_failed": {
+  "conical_A": {
+   "n": 30,
+   "n_success": 19,
+   "success_rate": 0.6333333333333333,
+   "wilson95": [
+    0.45513246433604937,
+    0.7812629779598231
+   ],
+   "n_physics_valid": 30,
+   "n_success_and_physics_valid": 19,
+   "td_vz_abs_p95": 1.1574490307630998,
+   "td_vh_p95": 2.5036681100159393,
+   "td_pos_err_median": 0.5714804458358297,
+   "td_pos_err_p95": 2.1046626680203135,
+   "td_pos_err_max": 3.623052545325674,
+   "td_tilt_deg_max": 14.470698734922111,
+   "fuel_mean_kg": 76.54778226295643,
+   "fuel_p95_kg": 92.77683716620258,
+   "gimbal_saturation_mean": 0.0,
+   "failure_reasons": [
+    "horizontal_speed",
+    "position_error",
+    "tip_over",
+    "tip_over_or_loss_of_control",
+    "touchdown_tilt"
+   ]
+  },
+  "bell_B": {
+   "n": 30,
+   "n_success": 19,
+   "success_rate": 0.6333333333333333,
+   "wilson95": [
+    0.45513246433604937,
+    0.7812629779598231
+   ],
+   "n_physics_valid": 30,
+   "n_success_and_physics_valid": 19,
+   "td_vz_abs_p95": 1.1629493963840296,
+   "td_vh_p95": 2.5139522301190875,
+   "td_pos_err_median": 0.5713207309059571,
+   "td_pos_err_p95": 2.103225590445334,
+   "td_pos_err_max": 3.587798147033679,
+   "td_tilt_deg_max": 14.474304508813496,
+   "fuel_mean_kg": 76.39673295618815,
+   "fuel_p95_kg": 92.58632377487376,
+   "gimbal_saturation_mean": 0.0,
+   "failure_reasons": [
+    "horizontal_speed",
+    "position_error",
+    "tip_over",
+    "tip_over_or_loss_of_control",
+    "touchdown_tilt"
+   ]
+  },
+  "bell_C": {
+   "n": 30,
+   "n_success": 19,
+   "success_rate": 0.6333333333333333,
+   "wilson95": [
+    0.45513246433604937,
+    0.7812629779598231
+   ],
+   "n_physics_valid": 0,
+   "n_success_and_physics_valid": 0,
+   "td_vz_abs_p95": 1.1538441941920161,
+   "td_vh_p95": 2.5206325101824145,
+   "td_pos_err_median": 0.5749435790020944,
+   "td_pos_err_p95": 2.1658666948268017,
+   "td_pos_err_max": 3.634819458735811,
+   "td_tilt_deg_max": 14.487868540706945,
+   "fuel_mean_kg": 79.62951652763796,
+   "fuel_p95_kg": 96.61891331562566,
+   "gimbal_saturation_mean": 0.0,
+   "failure_reasons": [
+    "horizontal_speed",
+    "position_error",
+    "tip_over",
+    "tip_over_or_loss_of_control",
+    "touchdown_tilt"
+   ]
+  }
+ },
+ "suite_seeds": [
+  1000,
+  1029
+ ],
+ "wall_time_s": 253.22222065925598
+}

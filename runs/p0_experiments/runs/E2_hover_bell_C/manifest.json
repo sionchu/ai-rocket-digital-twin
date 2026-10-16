@@ -1,0 +1,25 @@
+{
+ "run_id": "E2_hover_bell_C",
+ "command": "experiments",
+ "engine_design_ids": [
+  "bell_C"
+ ],
+ "vehicle_hash": "61b39afe3528f314",
+ "map_hashes": {
+  "bell_C": "8b8641b5c9621595"
+ },
+ "software": {
+  "python": "3.13.16",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "rocket_dt_commit": "d1f964b"
+ },
+ "seed": null,
+ "frame_convention": "world_Z_up_body_Z_forward",
+ "units": "SI",
+ "integrator": "python_rk4_reference",
+ "extra": {
+  "mass_engine_id": "bell_C",
+  "label": "ideal-1D map (not CFD-verified), Python RK4 reference integrator, PD baseline"
+ }
+}

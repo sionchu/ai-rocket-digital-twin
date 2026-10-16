@@ -24,10 +24,14 @@ def run_all(root: Path, out: Path, n_suite: int = 30, workers: int = 4):
                           [row["engine"]], veh.content_hash(), {row["engine"]: row["map_hash"]}, sw,
                           extra={"mass_engine_id": row["mass_engine"], "label": LABEL})
         write_run(out / "runs", man, row["metrics"], log, ep)
-    _, s3 = ex.landing_suite(root, n_suite, workers)
-    _, s3f = ex.landing_suite(root, n_suite, workers, rcs_failed=("rcs_01",))
+    suites = {
+        "S3_nominal": ex.landing_suite(root, n_suite, workers)[1],
+        "S3_rcs_01_failed_known": ex.landing_suite(root, n_suite, workers, rcs_failed=("rcs_01",))[1],
+        "S3_rcs_01_failed_unknown": ex.landing_suite(root, n_suite, workers, rcs_failed=("rcs_01",), fault_known=False)[1],
+        "S3_rcs_01_03_failed_known": ex.landing_suite(root, n_suite, workers, rcs_failed=("rcs_01", "rcs_03"))[1],
+    }
     result = {"label": LABEL, "software": sw, "vehicle_hash": veh.content_hash(),
-              "E0": e0, "E1_E2": [r[0] for r in e12], "S3_nominal": s3, "S3_rcs_01_failed": s3f,
+              "E0": e0, "E1_E2": [r[0] for r in e12], **suites,
               "suite_seeds": [1000, 1000 + n_suite - 1], "wall_time_s": time.time() - t0}
     (out / "results.json").write_text(json.dumps(result, indent=1, default=_default))
     (out / "summary.md").write_text(_markdown(result))
@@ -57,7 +61,9 @@ def _markdown(r) -> str:
         L.append(f"| {row['experiment']} | {row['engine']} | {row['scenario']} | {m['termination_reason']} | "
                  f"{m['physics_valid']} ({m['map_invalid_steps']} invalid steps) | {m['fuel_used_kg']:.2f} | "
                  f"{m['mean_throttle_engine_on']:.4f} | {_f(pos, 3)} | {_f(td.get('vz'), 3)} |")
-    for key, title in (("S3_nominal", "nominal"), ("S3_rcs_01_failed", "rcs_01 failed")):
+    for key, title in (("S3_nominal", "nominal"), ("S3_rcs_01_failed_known", "rcs_01 failed, fault known to allocator"),
+                       ("S3_rcs_01_failed_unknown", "rcs_01 failed silently (allocator unaware)"),
+                       ("S3_rcs_01_03_failed_known", "rcs_01 + rcs_03 failed (no +roll authority)")):
         L += [f"\n## S3 randomized landing suite, PD baseline, {title} (seeds {r['suite_seeds'][0]}–{r['suite_seeds'][1]})\n",
               "| engine | success | Wilson 95% | success & physics-valid | td pos err median/P95/max [m] | td |vz| P95 | td vh P95 | max td tilt [deg] | fuel mean/P95 [kg] | failure reasons |",
               "|---|---|---|---|---|---|---|---|---|---|"]

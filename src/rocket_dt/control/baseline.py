@@ -100,6 +100,11 @@ class CascadedPD:
         i_b = ms.inertia_com_body
         tau = -self.g.kp_att * (i_b @ e_r) - self.g.kd_att * (i_b @ w) + np.cross(w, i_b @ w)
 
+        # roll via RCS first; its pitch/yaw side torque is fed forward into the gimbal command
+        duty = self.alloc.allocate(tau[2], ms.com_body_m, rcs_failed)
+        tau_rcs = self.alloc.effect(ms.com_body_m)[:3] @ duty
+        tau = tau.copy()
+        tau[:2] -= tau_rcs[:2]
         # pitch/yaw via gimbal: tau_x = -l F sin dx ; tau_y = -l F cos dx sin dy, l = com_z - pivot_z
         f_now = self.map.lookup(actual_throttle, ambient_pa)[0]
         lever = ms.com_body_m[2] - self.pivot[2]
@@ -107,6 +112,5 @@ class CascadedPD:
         dy = np.arcsin(np.clip(-tau[1] / (lever * f_now * np.cos(dx)), -1, 1))
         gimbal = np.clip([dx, dy], -self.gmax, self.gmax)
 
-        duty = self.alloc.allocate(tau[2], ms.com_body_m, rcs_failed)
         return Command(True, throttle, gimbal, duty * self.dt,
                        {"a_des": a_des, "tau_cmd": tau, "f_cmd": f_cmd, "zb_des": zb_des})

@@ -43,6 +43,7 @@ class Scenario:
     disturbance_force_w: list = field(default_factory=lambda: [0.0, 0.0, 0.0])
     disturbance_torque_b: list = field(default_factory=lambda: [0.0, 0.0, 0.0])
     rcs_failed: list = field(default_factory=list)
+    fault_known_to_controller: bool = True  # False: actuator fails silently, allocator still uses it
     seed: int = 0
     propellant_mass_kg: float | None = None  # override initial load
 
@@ -88,7 +89,7 @@ def run_scenario(sc: Scenario, vehicle: VehicleConfig, mass_engine: EngineDesign
             td_com_z = ms.com_body_m[2] - feet[:, 2].min()
             if engine_on:
                 cmd = ctrl(x, pa, "hover" if sc.mode == "hover" else "descent", sc.target_w, td_com_z,
-                           act.state.throttle, failed)
+                           act.state.throttle, failed if sc.fault_known_to_controller else None)
                 act.command(t, True, cmd.throttle, cmd.gimbal_rad, cmd.rcs_on_time_s)
             else:
                 act.command(t, False, act.tmin, np.zeros(2), None)

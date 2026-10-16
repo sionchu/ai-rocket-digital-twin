@@ -18,7 +18,8 @@ from rocket_dt.schemas import EngineDesign
 
 def build_cfd_map(design: EngineDesign, finest: dict, gci: dict, n_throttle: int = 13,
                   pa_range=(50_000.0, 105_000.0), n_pa: int = 12) -> EnginePerformanceMap:
-    fin = finest["history"][-1]
+    from rocket_dt.cfd.post import window_stats
+    fin = window_stats(finest["history"]) if len(finest["history"]) > 1 else finest["history"][-1]
     s_nom, mdot_nom = fin["stream_thrust_n"], fin["mdot_out"]
     pe_nom, ae = fin["exit_p_avg_pa"], fin["exit_area_m2"]
     thr = np.linspace(design.throttle_min, design.throttle_max, n_throttle)

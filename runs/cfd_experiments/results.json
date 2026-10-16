@@ -1,0 +1,855 @@
+{
+ "software": {
+  "python": "3.13.16",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "rocket_dt_commit": "bcb17b9-dirty"
+ },
+ "cfd_summary": {
+  "refinement_ratio": 1.5,
+  "cases": [
+   {
+    "engine": "conical_A",
+    "level": 1,
+    "case": "runs/cfd/conical_A_L1",
+    "returncodes": {
+     "blockMesh": 0,
+     "checkMesh": 0,
+     "rhoCentralFoam": 0
+    },
+    "wall_time_s": 377.16532015800476,
+    "openfoam_version": "v1912",
+    "qa": {
+     "status": "PASS",
+     "window": {
+      "stream_thrust_n": 21730.72875051706,
+      "stream_thrust_n_rel_std": 0.00026584785576547014,
+      "mdot_out": 8.463866355958721,
+      "mdot_out_rel_std": 0.00021634944608643535,
+      "mdot_in": 8.463046066338068,
+      "mdot_in_rel_std": 0.0003738617286386286,
+      "mass_imbalance": -9.679682556019636e-05,
+      "mass_imbalance_rel_std": 5.957638166018625,
+      "exit_p_avg_pa": 133346.9852297199,
+      "exit_p_avg_pa_rel_std": 0.00018959026781635374,
+      "exit_area_m2": 0.019575132384929746,
+      "exit_area_m2_rel_std": 0.0,
+      "n_window": 8,
+      "t_window": [
+       0.0023,
+       0.003
+      ]
+     },
+     "tol_ripple": 0.001,
+     "tol_mass": 0.002
+    },
+    "mesh_ok": true,
+    "final": {
+     "stream_thrust_n": 21730.72875051706,
+     "stream_thrust_n_rel_std": 0.00026584785576547014,
+     "mdot_out": 8.463866355958721,
+     "mdot_out_rel_std": 0.00021634944608643535,
+     "mdot_in": 8.463046066338068,
+     "mdot_in_rel_std": 0.0003738617286386286,
+     "mass_imbalance": -9.679682556019636e-05,
+     "mass_imbalance_rel_std": 5.957638166018625,
+     "exit_p_avg_pa": 133346.9852297199,
+     "exit_p_avg_pa_rel_std": 0.00018959026781635374,
+     "exit_area_m2": 0.019575132384929746,
+     "exit_area_m2_rel_std": 0.0,
+     "n_window": 8,
+     "t_window": [
+      0.0023,
+      0.003
+     ]
+    }
+   },
+   {
+    "engine": "conical_A",
+    "level": 2,
+    "case": "runs/cfd/conical_A_L2",
+    "returncodes": {
+     "blockMesh": 0,
+     "checkMesh": 0,
+     "rhoCentralFoam": 0
+    },
+    "wall_time_s": 1426.6745808124542,
+    "openfoam_version": "v1912",
+    "qa": {
+     "status": "PASS",
+     "window": {
+      "stream_thrust_n": 21746.23230832751,
+      "stream_thrust_n_rel_std": 0.0003069666836688206,
+      "mdot_out": 8.467238795386276,
+      "mdot_out_rel_std": 0.0002620749126708325,
+      "mdot_in": 8.466051727963702,
+      "mdot_in_rel_std": 0.0006338599257604433,
+      "mass_imbalance": -0.00013996819402787599,
+      "mass_imbalance_rel_std": 6.338623836611054,
+      "exit_p_avg_pa": 133228.93519860148,
+      "exit_p_avg_pa_rel_std": 0.0002588626659867826,
+      "exit_area_m2": 0.019575132384749516,
+      "exit_area_m2_rel_std": 0.0,
+      "n_window": 8,
+      "t_window": [
+       0.0023,
+       0.003
+      ]
+     },
+     "tol_ripple": 0.001,
+     "tol_mass": 0.002
+    },
+    "mesh_ok": true,
+    "final": {
+     "stream_thrust_n": 21746.23230832751,
+     "stream_thrust_n_rel_std": 0.0003069666836688206,
+     "mdot_out": 8.467238795386276,
+     "mdot_out_rel_std": 0.0002620749126708325,
+     "mdot_in": 8.466051727963702,
+     "mdot_in_rel_std": 0.0006338599257604433,
+     "mass_imbalance": -0.00013996819402787599,
+     "mass_imbalance_rel_std": 6.338623836611054,
+     "exit_p_avg_pa": 133228.93519860148,
+     "exit_p_avg_pa_rel_std": 0.0002588626659867826,
+     "exit_area_m2": 0.019575132384749516,
+     "exit_area_m2_rel_std": 0.0,
+     "n_window": 8,
+     "t_window": [
+      0.0023,
+      0.003
+     ]
+    }
+   },
+   {
+    "engine": "conical_A",
+    "level": 3,
+    "case": "runs/cfd/conical_A_L3",
+    "returncodes": {
+     "blockMesh": 0,
+     "checkMesh": 0,
+     "rhoCentralFoam": 0
+    },
+    "wall_time_s": 5529.237540006638,
+    "openfoam_version": "v1912",
+    "qa": {
+     "status": "PASS",
+     "window": {
+      "stream_thrust_n": 21756.898553078674,
+      "stream_thrust_n_rel_std": 0.00043559340248173453,
+      "mdot_out": 8.4699897068353,
+      "mdot_out_rel_std": 0.0003620663066996614,
+      "mdot_in": 8.467406461632862,
+      "mdot_in_rel_std": 0.0007350088085569471,
+      "mass_imbalance": -0.00030465310193404866,
+      "mass_imbalance_rel_std": 3.408511340476292,
+      "exit_p_avg_pa": 133181.51694281772,
+      "exit_p_avg_pa_rel_std": 0.00032403425192929037,
+      "exit_area_m2": 0.01957513238547076,
+      "exit_area_m2_rel_std": 0.0,
+      "n_window": 8,
+      "t_window": [
+       0.0023,
+       0.003
+      ]
+     },
+     "tol_ripple": 0.001,
+     "tol_mass": 0.002
+    },
+    "mesh_ok": true,
+    "final": {
+     "stream_thrust_n": 21756.898553078674,
+     "stream_thrust_n_rel_std": 0.00043559340248173453,
+     "mdot_out": 8.4699897068353,
+     "mdot_out_rel_std": 0.0003620663066996614,
+     "mdot_in": 8.467406461632862,
+     "mdot_in_rel_std": 0.0007350088085569471,
+     "mass_imbalance": -0.00030465310193404866,
+     "mass_imbalance_rel_std": 3.408511340476292,
+     "exit_p_avg_pa": 133181.51694281772,
+     "exit_p_avg_pa_rel_std": 0.00032403425192929037,
+     "exit_area_m2": 0.01957513238547076,
+     "exit_area_m2_rel_std": 0.0,
+     "n_window": 8,
+     "t_window": [
+      0.0023,
+      0.003
+     ]
+    }
+   },
+   {
+    "engine": "bell_B",
+    "level": 1,
+    "case": "runs/cfd/bell_B_L1",
+    "returncodes": {
+     "blockMesh": 0,
+     "checkMesh": 0,
+     "rhoCentralFoam": 0
+    },
+    "wall_time_s": 390.1438510417938,
+    "openfoam_version": "v1912",
+    "qa": {
+     "status": "PASS",
+     "window": {
+      "stream_thrust_n": 21459.313278852263,
+      "stream_thrust_n_rel_std": 0.0003460524502253742,
+      "mdot_out": 8.465074661011087,
+      "mdot_out_rel_std": 0.0003300557816156562,
+      "mdot_in": 8.463242522967661,
+      "mdot_in_rel_std": 0.0003721215108675819,
+      "mass_imbalance": -0.0002163337851290498,
+      "mass_imbalance_rel_std": 2.2257539861466165,
+      "exit_p_avg_pa": 137352.85910483066,
+      "exit_p_avg_pa_rel_std": 0.000381844426174525,
+      "exit_area_m2": 0.019575132384929746,
+      "exit_area_m2_rel_std": 0.0,
+      "n_window": 8,
+      "t_window": [
+       0.0023,
+       0.003
+      ]
+     },
+     "tol_ripple": 0.001,
+     "tol_mass": 0.002
+    },
+    "mesh_ok": true,
+    "final": {
+     "stream_thrust_n": 21459.313278852263,
+     "stream_thrust_n_rel_std": 0.0003460524502253742,
+     "mdot_out": 8.465074661011087,
+     "mdot_out_rel_std": 0.0003300557816156562,
+     "mdot_in": 8.463242522967661,
+     "mdot_in_rel_std": 0.0003721215108675819,
+     "mass_imbalance": -0.0002163337851290498,
+     "mass_imbalance_rel_std": 2.2257539861466165,
+     "exit_p_avg_pa": 137352.85910483066,
+     "exit_p_avg_pa_rel_std": 0.000381844426174525,
+     "exit_area_m2": 0.019575132384929746,
+     "exit_area_m2_rel_std": 0.0,
+     "n_window": 8,
+     "t_window": [
+      0.0023,
+      0.003
+     ]
+    }
+   },
+   {
+    "engine": "bell_B",
+    "level": 2,
+    "case": "runs/cfd/bell_B_L2",
+    "returncodes": {
+     "blockMesh": 0,
+     "checkMesh": 0,
+     "rhoCentralFoam": 0
+    },
+    "wall_time_s": 1451.3474476337433,
+    "openfoam_version": "v1912",
+    "qa": {
+     "status": "PASS",
+     "window": {
+      "stream_thrust_n": 21483.201504784432,
+      "stream_thrust_n_rel_std": 0.00028546891617118697,
+      "mdot_out": 8.467945498327849,
+      "mdot_out_rel_std": 0.00023366007776742456,
+      "mdot_in": 8.46609534913404,
+      "mdot_in_rel_std": 0.0006289532433406143,
+      "mass_imbalance": -0.00021837949271876297,
+      "mass_imbalance_rel_std": 3.423512108821717,
+      "exit_p_avg_pa": 137052.51184979046,
+      "exit_p_avg_pa_rel_std": 0.00023084706787838852,
+      "exit_area_m2": 0.019575132384749516,
+      "exit_area_m2_rel_std": 0.0,
+      "n_window": 8,
+      "t_window": [
+       0.0023,
+       0.003
+      ]
+     },
+     "tol_ripple": 0.001,
+     "tol_mass": 0.002
+    },
+    "mesh_ok": true,
+    "final": {
+     "stream_thrust_n": 21483.201504784432,
+     "stream_thrust_n_rel_std": 0.00028546891617118697,
+     "mdot_out": 8.467945498327849,
+     "mdot_out_rel_std": 0.00023366007776742456,
+     "mdot_in": 8.46609534913404,
+     "mdot_in_rel_std": 0.0006289532433406143,
+     "mass_imbalance": -0.00021837949271876297,
+     "mass_imbalance_rel_std": 3.423512108821717,
+     "exit_p_avg_pa": 137052.51184979046,
+     "exit_p_avg_pa_rel_std": 0.00023084706787838852,
+     "exit_area_m2": 0.019575132384749516,
+     "exit_area_m2_rel_std": 0.0,
+     "n_window": 8,
+     "t_window": [
+      0.0023,
+      0.003
+     ]
+    }
+   },
+   {
+    "engine": "bell_B",
+    "level": 3,
+    "case": "runs/cfd/bell_B_L3",
+    "returncodes": {
+     "blockMesh": 0,
+     "checkMesh": 0,
+     "rhoCentralFoam": 0
+    },
+    "wall_time_s": 5615.208709955215,
+    "openfoam_version": "v1912",
+    "qa": {
+     "status": "PASS",
+     "window": {
+      "stream_thrust_n": 21496.158583182914,
+      "stream_thrust_n_rel_std": 0.00024334244652192565,
+      "mdot_out": 8.469112665191867,
+      "mdot_out_rel_std": 0.00020383960719175256,
+      "mdot_in": 8.467442603819732,
+      "mdot_in_rel_std": 0.0007277865871250397,
+      "mass_imbalance": -0.00019707282908865728,
+      "mass_imbalance_rel_std": 4.338088754979118,
+      "exit_p_avg_pa": 136861.65738221887,
+      "exit_p_avg_pa_rel_std": 0.00020403221677166858,
+      "exit_area_m2": 0.01957513238547076,
+      "exit_area_m2_rel_std": 0.0,
+      "n_window": 8,
+      "t_window": [
+       0.0023,
+       0.003
+      ]
+     },
+     "tol_ripple": 0.001,
+     "tol_mass": 0.002
+    },
+    "mesh_ok": true,
+    "final": {
+     "stream_thrust_n": 21496.158583182914,
+     "stream_thrust_n_rel_std": 0.00024334244652192565,
+     "mdot_out": 8.469112665191867,
+     "mdot_out_rel_std": 0.00020383960719175256,
+     "mdot_in": 8.467442603819732,
+     "mdot_in_rel_std": 0.0007277865871250397,
+     "mass_imbalance": -0.00019707282908865728,
+     "mass_imbalance_rel_std": 4.338088754979118,
+     "exit_p_avg_pa": 136861.65738221887,
+     "exit_p_avg_pa_rel_std": 0.00020403221677166858,
+     "exit_area_m2": 0.01957513238547076,
+     "exit_area_m2_rel_std": 0.0,
+     "n_window": 8,
+     "t_window": [
+      0.0023,
+      0.003
+     ]
+    }
+   }
+  ],
+  "gci": {
+   "conical_A": {
+    "levels": [
+     3,
+     2,
+     1
+    ],
+    "stream_thrust": {
+     "p": 0.9223616718046802,
+     "f_extrap": 21780.417555404412,
+     "gci_fine": 0.0013512382215436732,
+     "gci_medium": 0.001965009765381645,
+     "asymptotic_ratio": 1.0004904870232203,
+     "monotone": true
+    },
+    "mdot": {
+     "p": 0.5023960173026051,
+     "f_extrap": 8.482165367564617,
+     "gci_fine": 0.0017968824565822163,
+     "gci_medium": 0.0022035773023303088,
+     "asymptotic_ratio": 1.000324888846943,
+     "monotone": true
+    },
+    "all_levels_qa_pass": true
+   },
+   "bell_B": {
+    "levels": [
+     3,
+     2,
+     1
+    ],
+    "stream_thrust": {
+     "p": 1.5087450268888762,
+     "f_extrap": 21511.517069573023,
+     "gci_fine": 0.0008930948249821283,
+     "gci_medium": 0.0016475410323668726,
+     "asymptotic_ratio": 1.0006031260469066,
+     "monotone": true
+    },
+    "mdot": {
+     "p": 2.2197333104439787,
+     "f_extrap": 8.469912279041054,
+     "gci_fine": 0.00011801913033823219,
+     "gci_medium": 0.00029032731634737093,
+     "asymptotic_ratio": 1.000137833535212,
+     "monotone": true
+    },
+    "all_levels_qa_pass": true
+   }
+  },
+  "maps": {
+   "conical_A": {
+    "path": "runs/cfd/maps/conical_A_cfd.json",
+    "map_hash": "1833e5959ed69332"
+   },
+   "bell_B": {
+    "path": "runs/cfd/maps/bell_B_cfd.json",
+    "map_hash": "58783db6d5b99ca3"
+   }
+  }
+ },
+ "performance": [
+  {
+   "engine": "conical_A",
+   "throttle": 1.0,
+   "pa": 101325.0,
+   "F_cfd": 19773.44826412085,
+   "F_1d": 19846.22901996586,
+   "dF_rel": -0.0036672334966905717,
+   "mdot_cfd": 8.4699897068353,
+   "mdot_1d": 8.5269263305024,
+   "dmdot_rel": -0.00667727402117075,
+   "isp_cfd": 238.05584751930064,
+   "isp_1d": 237.33665231443211,
+   "valid_cfd": true,
+   "valid_1d": true
+  },
+  {
+   "engine": "conical_A",
+   "throttle": 0.6,
+   "pa": 101325.0,
+   "F_cfd": 11070.688842889378,
+   "F_1d": 11113.349411979514,
+   "dF_rel": -0.0038386779276597346,
+   "mdot_cfd": 5.08199382410118,
+   "mdot_1d": 5.116155798301439,
+   "dmdot_rel": -0.006677274021170542,
+   "isp_cfd": 222.1364545621967,
+   "isp_1d": 221.5034690625842,
+   "valid_cfd": true,
+   "valid_1d": true
+  },
+  {
+   "engine": "conical_A",
+   "throttle": 1.0,
+   "pa": 50000.0,
+   "F_cfd": 20778.141933805135,
+   "F_1d": 20852.19901996586,
+   "dF_rel": -0.003551524042611399,
+   "mdot_cfd": 8.4699897068353,
+   "mdot_1d": 8.5269263305024,
+   "dmdot_rel": -0.00667727402117075,
+   "isp_cfd": 250.15152247893587,
+   "isp_1d": 249.36682448913376,
+   "valid_cfd": true,
+   "valid_1d": true
+  },
+  {
+   "engine": "conical_A",
+   "pe_cfd_nominal": 133181.51694281772,
+   "pe_1d_nominal": 131398.34514490608,
+   "gci_stream_thrust": {
+    "p": 0.9223616718046802,
+    "f_extrap": 21780.417555404412,
+    "gci_fine": 0.0013512382215436732,
+    "gci_medium": 0.001965009765381645,
+    "asymptotic_ratio": 1.0004904870232203,
+    "monotone": true
+   }
+  },
+  {
+   "engine": "bell_B",
+   "throttle": 1.0,
+   "pa": 101325.0,
+   "F_cfd": 19512.70829422509,
+   "F_1d": 19886.136687108858,
+   "dF_rel": -0.018778327774737796,
+   "mdot_cfd": 8.469112665191867,
+   "mdot_1d": 8.5269263305024,
+   "dmdot_rel": -0.006780129564826073,
+   "isp_cfd": 234.9410828894605,
+   "isp_1d": 237.81389925700591,
+   "valid_cfd": true,
+   "valid_1d": true
+  },
+  {
+   "engine": "bell_B",
+   "throttle": 0.6,
+   "pa": 101325.0,
+   "F_cfd": 10914.244860951925,
+   "F_1d": 11137.294012265313,
+   "dF_rel": -0.020027230229151465,
+   "mdot_cfd": 5.08146759911512,
+   "mdot_1d": 5.116155798301439,
+   "dmdot_rel": -0.006780129564825901,
+   "isp_cfd": 219.02004135698465,
+   "isp_1d": 221.980716005158,
+   "valid_cfd": true,
+   "valid_1d": true
+  },
+  {
+   "engine": "bell_B",
+   "throttle": 1.0,
+   "pa": 50000.0,
+   "F_cfd": 20517.401963909375,
+   "F_1d": 20892.10668710886,
+   "dF_rel": -0.01793522926200111,
+   "mdot_cfd": 8.469112665191867,
+   "mdot_1d": 8.5269263305024,
+   "dmdot_rel": -0.006780129564826073,
+   "isp_cfd": 247.03801044910992,
+   "isp_1d": 249.84407143170756,
+   "valid_cfd": true,
+   "valid_1d": true
+  },
+  {
+   "engine": "bell_B",
+   "pe_cfd_nominal": 136861.65738221887,
+   "pe_1d_nominal": 131398.34514490608,
+   "gci_stream_thrust": {
+    "p": 1.5087450268888762,
+    "f_extrap": 21511.517069573023,
+    "gci_fine": 0.0008930948249821283,
+    "gci_medium": 0.0016475410323668726,
+    "asymptotic_ratio": 1.0006031260469066,
+    "monotone": true
+   }
+  }
+ ],
+ "flight": [
+  {
+   "experiment": "CFD:ideal1d",
+   "engine": "conical_A",
+   "scenario": "hover",
+   "metrics": {
+    "scenario": "hover_20m",
+    "termination_reason": "completed",
+    "duration_s": 20.000000000000306,
+    "fuel_used_kg": 104.0557540149727,
+    "rcs_gas_used_kg": 0.21963118433365736,
+    "engine_mass_kg": 47.185994835839175,
+    "dry_mass_kg": 747.1859948358392,
+    "max_tilt_deg": 5.19441671737119,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6101183221241218,
+    "mean_thrust_n": 11338.957434128159,
+    "pos_rms_m": 0.21390168768219162,
+    "alt_rms_m": 0.023495472798491398,
+    "tilt_rms_deg": 2.3109786930488263,
+    "success": true
+   },
+   "map_hash": "b337fd547e15ef5c",
+   "mass_engine": "conical_A"
+  },
+  {
+   "experiment": "CFD:ideal1d",
+   "engine": "conical_A",
+   "scenario": "landing",
+   "metrics": {
+    "scenario": "descent_landing_60m",
+    "termination_reason": "landed",
+    "duration_s": 17.16000000000087,
+    "fuel_used_kg": 77.4001871306811,
+    "rcs_gas_used_kg": 0.08785247373346294,
+    "engine_mass_kg": 47.185994835839175,
+    "dry_mass_kg": 747.1859948358392,
+    "max_tilt_deg": 11.889461107755176,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6400854694885312,
+    "mean_thrust_n": 11993.999310673922,
+    "touchdown": {
+     "t": 14.175000000000816,
+     "vz": -0.8138919492689517,
+     "vh": 0.5132614373726289,
+     "tilt": 0.054053656249234125,
+     "pos_err": 0.28907861432725557,
+     "omega": 0.10204730702736656
+    },
+    "success": true,
+    "failure_reasons": [],
+    "final_tilt_deg": 0.07372326996387127
+   },
+   "map_hash": "b337fd547e15ef5c",
+   "mass_engine": "conical_A"
+  },
+  {
+   "experiment": "CFD:ideal1d",
+   "engine": "bell_B",
+   "scenario": "hover",
+   "metrics": {
+    "scenario": "hover_20m",
+    "termination_reason": "completed",
+    "duration_s": 20.000000000000306,
+    "fuel_used_kg": 103.84356715495392,
+    "rcs_gas_used_kg": 0.21963118433365736,
+    "engine_mass_kg": 46.79015488020359,
+    "dry_mass_kg": 746.7901548802035,
+    "max_tilt_deg": 5.193619117947324,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6088736848458768,
+    "mean_thrust_n": 11336.083081676781,
+    "pos_rms_m": 0.2136243330344183,
+    "alt_rms_m": 0.02341101122911227,
+    "tilt_rms_deg": 2.308075505416436,
+    "success": true
+   },
+   "map_hash": "bea0825fb86c3ba9",
+   "mass_engine": "bell_B"
+  },
+  {
+   "experiment": "CFD:ideal1d",
+   "engine": "bell_B",
+   "scenario": "landing",
+   "metrics": {
+    "scenario": "descent_landing_60m",
+    "termination_reason": "landed",
+    "duration_s": 17.16000000000087,
+    "fuel_used_kg": 77.24077308055945,
+    "rcs_gas_used_kg": 0.08785247373346294,
+    "engine_mass_kg": 46.79015488020359,
+    "dry_mass_kg": 746.7901548802035,
+    "max_tilt_deg": 11.890365783785462,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6387664192553159,
+    "mean_thrust_n": 11990.693715532821,
+    "touchdown": {
+     "t": 14.175000000000816,
+     "vz": -0.8139265897088377,
+     "vh": 0.5120877657302967,
+     "tilt": 0.05406387356788384,
+     "pos_err": 0.28913668639495704,
+     "omega": 0.10185201184515943
+    },
+    "success": true,
+    "failure_reasons": [],
+    "final_tilt_deg": 0.07398012100203524
+   },
+   "map_hash": "bea0825fb86c3ba9",
+   "mass_engine": "bell_B"
+  },
+  {
+   "experiment": "CFD:cfd",
+   "engine": "conical_A",
+   "scenario": "hover",
+   "metrics": {
+    "scenario": "hover_20m",
+    "termination_reason": "completed",
+    "duration_s": 20.000000000000306,
+    "fuel_used_kg": 103.71236058646485,
+    "rcs_gas_used_kg": 0.21963118433365736,
+    "engine_mass_kg": 47.185994835839175,
+    "dry_mass_kg": 747.1859948358392,
+    "max_tilt_deg": 5.191711612704032,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6121935492376347,
+    "mean_thrust_n": 11340.679371326554,
+    "pos_rms_m": 0.21376944377105983,
+    "alt_rms_m": 0.023544869954904624,
+    "tilt_rms_deg": 2.3094148725579533,
+    "success": true
+   },
+   "map_hash": "1833e5959ed69332",
+   "mass_engine": "conical_A"
+  },
+  {
+   "experiment": "CFD:cfd",
+   "engine": "conical_A",
+   "scenario": "landing",
+   "metrics": {
+    "scenario": "descent_landing_60m",
+    "termination_reason": "landed",
+    "duration_s": 17.16000000000087,
+    "fuel_used_kg": 77.1429235650507,
+    "rcs_gas_used_kg": 0.08785247373346294,
+    "engine_mass_kg": 47.185994835839175,
+    "dry_mass_kg": 747.1859948358392,
+    "max_tilt_deg": 11.888092609369242,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6422476426628135,
+    "mean_thrust_n": 11995.354921666056,
+    "touchdown": {
+     "t": 14.175000000000816,
+     "vz": -0.813589342021652,
+     "vh": 0.5125691373250332,
+     "tilt": 0.05411002731727988,
+     "pos_err": 0.28935483977254184,
+     "omega": 0.10188447557850042
+    },
+    "success": true,
+    "failure_reasons": [],
+    "final_tilt_deg": 0.07419635078165408
+   },
+   "map_hash": "1833e5959ed69332",
+   "mass_engine": "conical_A"
+  },
+  {
+   "experiment": "CFD:cfd",
+   "engine": "bell_B",
+   "scenario": "hover",
+   "metrics": {
+    "scenario": "hover_20m",
+    "termination_reason": "completed",
+    "duration_s": 20.000000000000306,
+    "fuel_used_kg": 104.88145752417859,
+    "rcs_gas_used_kg": 0.21963118433365736,
+    "engine_mass_kg": 46.79015488020359,
+    "dry_mass_kg": 746.7901548802035,
+    "max_tilt_deg": 5.179979705265027,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6191614132201291,
+    "mean_thrust_n": 11330.838000419262,
+    "pos_rms_m": 0.21312919754161458,
+    "alt_rms_m": 0.0234319257876951,
+    "tilt_rms_deg": 2.302361009673098,
+    "success": true
+   },
+   "map_hash": "58783db6d5b99ca3",
+   "mass_engine": "bell_B"
+  },
+  {
+   "experiment": "CFD:cfd",
+   "engine": "bell_B",
+   "scenario": "landing",
+   "metrics": {
+    "scenario": "descent_landing_60m",
+    "termination_reason": "landed",
+    "duration_s": 17.16000000000087,
+    "fuel_used_kg": 78.0217069434135,
+    "rcs_gas_used_kg": 0.08785247373346294,
+    "engine_mass_kg": 46.79015488020359,
+    "dry_mass_kg": 746.7901548802035,
+    "max_tilt_deg": 11.88346655533606,
+    "gimbal_saturation_frac": 0.0,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "mean_throttle_engine_on": 0.6496351880629005,
+    "mean_thrust_n": 11986.697198306776,
+    "touchdown": {
+     "t": 14.170000000000815,
+     "vz": -0.8299479436977547,
+     "vh": 0.5175623397912628,
+     "tilt": 0.05478602377624879,
+     "pos_err": 0.29267132871008,
+     "omega": 0.10486405443128853
+    },
+    "success": true,
+    "failure_reasons": [],
+    "final_tilt_deg": 0.0747581729615958
+   },
+   "map_hash": "58783db6d5b99ca3",
+   "mass_engine": "bell_B"
+  }
+ ],
+ "suites": {
+  "ideal1d": {
+   "conical_A": {
+    "n": 30,
+    "n_success": 30,
+    "success_rate": 1.0,
+    "wilson95": [
+     0.8864829086095221,
+     1.0
+    ],
+    "n_physics_valid": 30,
+    "n_success_and_physics_valid": 30,
+    "td_vz_abs_p95": 0.8271340041439446,
+    "td_vh_p95": 0.7514672249013766,
+    "td_pos_err_median": 0.36452523331729125,
+    "td_pos_err_p95": 0.7052584107670224,
+    "td_pos_err_max": 0.837633427842605,
+    "td_tilt_deg_max": 6.453054180260344,
+    "fuel_mean_kg": 78.84611566420364,
+    "fuel_p95_kg": 93.14391536411665,
+    "gimbal_saturation_mean": 0.0,
+    "failure_reasons": []
+   },
+   "bell_B": {
+    "n": 30,
+    "n_success": 30,
+    "success_rate": 1.0,
+    "wilson95": [
+     0.8864829086095221,
+     1.0
+    ],
+    "n_physics_valid": 30,
+    "n_success_and_physics_valid": 30,
+    "td_vz_abs_p95": 0.8299137971469779,
+    "td_vh_p95": 0.7645277231876574,
+    "td_pos_err_median": 0.363529006410202,
+    "td_pos_err_p95": 0.7046990241873751,
+    "td_pos_err_max": 0.8373911740599502,
+    "td_tilt_deg_max": 6.446844367909374,
+    "fuel_mean_kg": 78.68713365576461,
+    "fuel_p95_kg": 92.95274241639528,
+    "gimbal_saturation_mean": 0.0,
+    "failure_reasons": []
+   }
+  },
+  "cfd": {
+   "conical_A": {
+    "n": 30,
+    "n_success": 30,
+    "success_rate": 1.0,
+    "wilson95": [
+     0.8864829086095221,
+     1.0
+    ],
+    "n_physics_valid": 30,
+    "n_success_and_physics_valid": 30,
+    "td_vz_abs_p95": 0.8283355661866859,
+    "td_vh_p95": 0.7512768707330993,
+    "td_pos_err_median": 0.36317684216023494,
+    "td_pos_err_p95": 0.7051549363549217,
+    "td_pos_err_max": 0.8374834250013676,
+    "td_tilt_deg_max": 6.452303517828804,
+    "fuel_mean_kg": 78.58077493787415,
+    "fuel_p95_kg": 92.83587961388653,
+    "gimbal_saturation_mean": 0.0,
+    "failure_reasons": []
+   },
+   "bell_B": {
+    "n": 30,
+    "n_success": 30,
+    "success_rate": 1.0,
+    "wilson95": [
+     0.8864829086095221,
+     1.0
+    ],
+    "n_physics_valid": 30,
+    "n_success_and_physics_valid": 30,
+    "td_vz_abs_p95": 0.8312749841332286,
+    "td_vh_p95": 0.7507734483931147,
+    "td_pos_err_median": 0.3622106544133714,
+    "td_pos_err_p95": 0.7055645728146548,
+    "td_pos_err_max": 0.8377323880715086,
+    "td_tilt_deg_max": 6.451175344938361,
+    "fuel_mean_kg": 79.47147166318882,
+    "fuel_p95_kg": 93.88656518091148,
+    "gimbal_saturation_mean": 0.0,
+    "failure_reasons": []
+   }
+  }
+ }
+}

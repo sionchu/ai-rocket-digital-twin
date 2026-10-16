@@ -77,24 +77,34 @@ def authority_report(vehicle: VehicleConfig, com_b: np.ndarray, thrust_n: float,
 class RcsAllocator:
     """Bounded least squares duty allocation for the RCS: min ||W (A u - b)||, 0 <= u <= 1.
 
-    Targets the commanded roll torque while asking for zero net lateral force
-    and zero pitch/yaw torque (those are left to the gimbal).
+    Roll torque is the RCS job. Pitch/yaw torque and lateral force produced by the RCS are
+    only weakly penalised (w_xy, w_force) and returned to the caller, who feeds them forward
+    to the gimbal. With a failed thruster this lets the surviving single thruster still
+    deliver roll torque (its pitch/yaw side effect is cancelled by the gimbal) instead of
+    the allocator refusing to fire it, which produced a one-sided roll ratchet (P0 v1).
     """
 
-    def __init__(self, vehicle: VehicleConfig, w_force: float = 0.05):
+    def __init__(self, vehicle: VehicleConfig, w_force: float = 0.01, w_xy: float = 0.02):
         self.rcs = vehicle.layout.rcs
         self.w_force = w_force
+        self.w_xy = w_xy
         self.vehicle = vehicle
+
+    def effect(self, com_b: np.ndarray) -> np.ndarray:
+        """(6, n) body wrench [tau_x, tau_y, tau_z, F_x, F_y, F_z] per thruster at full thrust."""
+        E = np.zeros((6, len(self.rcs)))
+        for k, t in enumerate(self.rcs):
+            f = t.max_thrust_n * np.asarray(t.force_direction_body)
+            E[:3, k] = np.cross(np.asarray(t.position_body_m) - com_b, f)
+            E[3:, k] = f
+        return E
 
     def allocate(self, tau_z_cmd: float, com_b: np.ndarray, failed: np.ndarray | None = None) -> np.ndarray:
         n = len(self.rcs)
         if n == 0:
             return np.zeros(0)
-        A = np.zeros((5, n))
-        for k, t in enumerate(self.rcs):
-            f = t.max_thrust_n * np.asarray(t.force_direction_body)
-            tau = np.cross(np.asarray(t.position_body_m) - com_b, f)
-            A[:, k] = [tau[0], tau[1], tau[2], self.w_force * f[0], self.w_force * f[1]]
+        E = self.effect(com_b)
+        A = np.vstack([self.w_xy * E[0], self.w_xy * E[1], E[2], self.w_force * E[3], self.w_force * E[4]])
         ub = np.ones(n)
         if failed is not None:
             ub = np.where(failed, 1e-12, 1.0)

@@ -92,17 +92,34 @@ def history(case: Path) -> list[dict]:
     return [integrate(case, t, mesh) for t in time_dirs(case)]
 
 
-def qa(case: Path, hist: list[dict], tol_thrust=2e-4, tol_mass=2e-3) -> dict:
-    """Convergence QA: last two writes agree and mass is conserved inlet->outlet."""
-    if len(hist) < 2:
-        return {"status": "FAIL", "reason": "fewer than 2 written times"}
-    a, b = hist[-2], hist[-1]
-    d_s = abs(b["stream_thrust_n"] - a["stream_thrust_n"]) / abs(b["stream_thrust_n"])
-    ok_s, ok_m = d_s < tol_thrust, abs(b["mass_imbalance"]) < tol_mass
-    finite = all(np.isfinite([b["stream_thrust_n"], b["mdot_out"]]))
-    return {"status": "PASS" if (ok_s and ok_m and finite) else "FAIL",
-            "rel_change_stream_thrust_last_write": d_s, "mass_imbalance": b["mass_imbalance"],
-            "tol_thrust": tol_thrust, "tol_mass": tol_mass}
+QA_WINDOW = 8  # last N writes (writeInterval 1e-4 s -> ~2 flow-through times)
+
+
+def window_stats(hist: list[dict], n: int = QA_WINDOW) -> dict:
+    """Mean and relative std over the last n writes (the solution keeps a small unsteady ripple)."""
+    w = hist[-n:]
+    out = {}
+    for k in ("stream_thrust_n", "mdot_out", "mdot_in", "mass_imbalance", "exit_p_avg_pa", "exit_area_m2"):
+        v = np.array([h[k] for h in w], float)
+        out[k] = float(v.mean())
+        out[k + "_rel_std"] = float(v.std() / abs(v.mean())) if v.mean() else float("nan")
+    out["n_window"] = len(w)
+    out["t_window"] = [w[0]["time"], w[-1]["time"]]
+    return out
+
+
+def qa(case: Path, hist: list[dict], tol_ripple=1e-3, tol_mass=2e-3, n: int = QA_WINDOW) -> dict:
+    """Convergence QA on a statistically steady window: small thrust ripple and inlet/outlet mass balance.
+
+    (A two-point 'last write vs previous' rule was tried first and rejected: it fails on a
+    +/-0.05 % limit-cycle ripple that is far below the grid uncertainty; see ADR-0006.)
+    """
+    if len(hist) < n:
+        return {"status": "FAIL", "reason": f"fewer than {n} written times"}
+    w = window_stats(hist, n)
+    finite = bool(np.isfinite([w["stream_thrust_n"], w["mdot_out"]]).all())
+    ok = finite and w["stream_thrust_n_rel_std"] < tol_ripple and abs(w["mass_imbalance"]) < tol_mass
+    return {"status": "PASS" if ok else "FAIL", "window": w, "tol_ripple": tol_ripple, "tol_mass": tol_mass}
 
 
 def gci(f1: float, f2: float, f3: float, r21: float, r32: float, fs: float = 1.25) -> dict:

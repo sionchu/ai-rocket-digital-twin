@@ -111,9 +111,9 @@ def wilson(k: int, n: int, z: float = 1.96):
 
 
 def landing_suite(root: Path, n: int = 30, workers: int = 4, seed0: int = 1000, rcs_failed=(),
-                  map_source: str = "ideal1d", engines=ENGINES):
+                  map_source: str = "ideal1d", engines=ENGINES, fault_known: bool = True):
     base = _load_sc(root, "landing")
-    base = replace(base, rcs_failed=list(rcs_failed))
+    base = replace(base, rcs_failed=list(rcs_failed), fault_known_to_controller=fault_known)
     scs = randomized_scenarios(base, n, seed0)
     jobs = [(root, "S3", e, sc.name, sc, map_source) for e in engines for sc in scs]
     with ProcessPoolExecutor(workers) as ex:

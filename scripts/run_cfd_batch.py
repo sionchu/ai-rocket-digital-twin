@@ -57,21 +57,33 @@ def main():
     ap.add_argument("--levels", nargs="+", type=int, default=[1, 2, 3])
     ap.add_argument("--jobs", type=int, default=4)
     ap.add_argument("--out", default=str(REPO / "runs/cfd"))
+    ap.add_argument("--post-only", action="store_true", help="re-run QA/GCI/maps on existing cases")
     a = ap.parse_args()
-    jobs = [(e, l, a.out) for l in sorted(a.levels, reverse=True) for e in a.engines]  # longest first
-    with ProcessPoolExecutor(a.jobs) as ex:
-        results = list(ex.map(run_case, jobs))
+    if a.post_only:
+        results = []
+        for e in a.engines:
+            for lv in a.levels:
+                r = json.loads((Path(a.out) / f"{e}_L{lv}" / "cfd_result.json").read_text())
+                r["qa"] = post.qa(Path(r["case"]), r["history"]) if r["history"] else r["qa"]
+                Path(r["case"], "cfd_result.json").write_text(json.dumps(r, indent=1))
+                results.append(r)
+    else:
+        jobs = [(e, l, a.out) for l in sorted(a.levels, reverse=True) for e in a.engines]  # longest first
+        with ProcessPoolExecutor(a.jobs) as ex:
+            results = list(ex.map(run_case, jobs))
     summary = {"refinement_ratio": REFINEMENT_RATIO, "cases": [{k: v for k, v in r.items() if k != "history"} | {
-        "final": r["history"][-1] if r["history"] else None} for r in results], "gci": {}, "maps": {}}
+        "final": post.window_stats(r["history"]) if r["history"] else None} for r in results], "gci": {}, "maps": {}}
     for e in a.engines:
         rs = sorted([r for r in results if r["engine"] == e and r["history"]], key=lambda r: -r["level"])
         if len(rs) >= 3:
-            f = [r["history"][-1]["stream_thrust_n"] for r in rs[:3]]
-            m = [r["history"][-1]["mdot_out"] for r in rs[:3]]
+            ws = [post.window_stats(r["history"]) for r in rs[:3]]
+            f = [w["stream_thrust_n"] for w in ws]
+            m = [w["mdot_out"] for w in ws]
             summary["gci"][e] = {"levels": [r["level"] for r in rs[:3]],
                                  "stream_thrust": post.gci(*f, REFINEMENT_RATIO, REFINEMENT_RATIO),
                                  "mdot": post.gci(*m, REFINEMENT_RATIO, REFINEMENT_RATIO)}
             finest = rs[0]
+            summary["gci"][e]["all_levels_qa_pass"] = all(r["qa"]["status"] == "PASS" for r in rs[:3])
             if finest["qa"]["status"] == "PASS":
                 cmap = build_cfd_map(load_engine(REPO / f"configs/engines/{e}.yaml"), finest, summary["gci"][e])
                 path = Path(a.out) / "maps" / f"{e}_cfd.json"

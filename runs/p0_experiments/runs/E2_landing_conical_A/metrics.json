@@ -10,15 +10,15 @@
  "gimbal_saturation_frac": 0.0,
  "map_invalid_steps": 0,
  "physics_valid": true,
- "mean_throttle_engine_on": 0.6400854694885312,
- "mean_thrust_n": 11993.999310673922,
+ "mean_throttle_engine_on": 0.6400854694885311,
+ "mean_thrust_n": 11993.999310673926,
  "touchdown": {
   "t": 14.175000000000816,
-  "vz": -0.8138919492689517,
-  "vh": 0.5132614373726289,
+  "vz": -0.8138919492689523,
+  "vh": 0.5132614373726295,
   "tilt": 0.054053656249234125,
-  "pos_err": 0.28907861432725557,
-  "omega": 0.10204730702736656
+  "pos_err": 0.28907861432725535,
+  "omega": 0.10204730702736683
  },
  "success": true,
  "failure_reasons": [],

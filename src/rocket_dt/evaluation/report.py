@@ -29,6 +29,8 @@ def run_all(root: Path, out: Path, n_suite: int = 30, workers: int = 4):
         "S3_rcs_01_failed_known": ex.landing_suite(root, n_suite, workers, rcs_failed=("rcs_01",))[1],
         "S3_rcs_01_failed_unknown": ex.landing_suite(root, n_suite, workers, rcs_failed=("rcs_01",), fault_known=False)[1],
         "S3_rcs_01_03_failed_known": ex.landing_suite(root, n_suite, workers, rcs_failed=("rcs_01", "rcs_03"))[1],
+        "S3_rcs_01_03_failed_unknown": ex.landing_suite(root, n_suite, workers, rcs_failed=("rcs_01", "rcs_03"),
+                                                        fault_known=False)[1],
     }
     result = {"label": LABEL, "software": sw, "vehicle_hash": veh.content_hash(),
               "E0": e0, "E1_E2": [r[0] for r in e12], **suites,
@@ -63,7 +65,8 @@ def _markdown(r) -> str:
                  f"{m['mean_throttle_engine_on']:.4f} | {_f(pos, 3)} | {_f(td.get('vz'), 3)} |")
     for key, title in (("S3_nominal", "nominal"), ("S3_rcs_01_failed_known", "rcs_01 failed, fault known to allocator"),
                        ("S3_rcs_01_failed_unknown", "rcs_01 failed silently (allocator unaware)"),
-                       ("S3_rcs_01_03_failed_known", "rcs_01 + rcs_03 failed (no +roll authority)")):
+                       ("S3_rcs_01_03_failed_known", "rcs_01 + rcs_03 failed (no +roll authority), fault known"),
+                       ("S3_rcs_01_03_failed_unknown", "rcs_01 + rcs_03 failed silently (no fault detection)")):
         L += [f"\n## S3 randomized landing suite, PD baseline, {title} (seeds {r['suite_seeds'][0]}–{r['suite_seeds'][1]})\n",
               "| engine | success | Wilson 95% | success & physics-valid | td pos err median/P95/max [m] | td |vz| P95 | td vh P95 | max td tilt [deg] | fuel mean/P95 [kg] | failure reasons |",
               "|---|---|---|---|---|---|---|---|---|---|"]

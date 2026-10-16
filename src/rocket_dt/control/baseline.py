@@ -57,6 +57,12 @@ class CascadedPD:
         self.pivot = np.asarray(vehicle.layout.main_engine.gimbal_pivot_body_m, float)
         self.gmax = vehicle.layout.main_engine.max_gimbal_rad
 
+    def _roll_bidirectional(self, com_b, rcs_failed) -> bool:
+        tz = self.alloc.effect(com_b)[2]
+        if rcs_failed is not None:
+            tz = tz[~np.asarray(rcs_failed)]
+        return bool((tz > 1e-9).any() and (tz < -1e-9).any())
+
     def desired_accel(self, x, mode: str, target_w: np.ndarray, touchdown_com_z: float) -> np.ndarray:
         g = self.g
         p, v = x[IDX_P], x[IDX_V]
@@ -91,14 +97,22 @@ class CascadedPD:
         f_cmd = float(t_w @ rot[:, 2])  # project on current nose axis
         throttle = self.map.throttle_for_thrust(max(f_cmd, 0.0), ambient_pa)
 
-        # desired attitude: nose along zb_des, heading keeps body x near world x
-        x_ref = np.array([1.0, 0.0, 0.0])
+        # desired attitude: nose along zb_des, heading keeps body x near world x.
+        # If the healthy RCS cannot make roll torque of both signs, heading hold would
+        # ratchet the roll rate one way; fall back to roll-rate damping only (heading free).
+        roll_ok = self._roll_bidirectional(ms.com_body_m, rcs_failed)
+        x_ref = np.array([1.0, 0.0, 0.0]) if roll_ok else rot[:, 0]
         xb = x_ref - (x_ref @ zb_des) * zb_des
         xb /= np.linalg.norm(xb)
         r_des = np.column_stack([xb, np.cross(zb_des, xb), zb_des])
         e_r = 0.5 * _vee(r_des.T @ rot - rot.T @ r_des)
         i_b = ms.inertia_com_body
         tau = -self.g.kp_att * (i_b @ e_r) - self.g.kd_att * (i_b @ w) + np.cross(w, i_b @ w)
+        if not roll_ok:
+            tz = self.alloc.effect(ms.com_body_m)[2]
+            healthy = tz if rcs_failed is None else tz[~np.asarray(rcs_failed)]
+            if (tau[2] > 0 and not (healthy > 1e-9).any()) or (tau[2] < 0 and not (healthy < -1e-9).any()):
+                tau[2] = 0.0  # cannot be produced; never fire the opposite side to "help"
 
         # roll via RCS first; its pitch/yaw side torque is fed forward into the gimbal command
         duty = self.alloc.allocate(tau[2], ms.com_body_m, rcs_failed)

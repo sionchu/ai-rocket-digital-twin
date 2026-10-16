@@ -43,6 +43,7 @@
    0.0
   ],
   "rcs_failed": [],
+  "fault_known_to_controller": true,
   "seed": 0,
   "propellant_mass_kg": null
  },

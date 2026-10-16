@@ -12,8 +12,8 @@
  "physics_valid": false,
  "mean_throttle_engine_on": 0.6370699963091461,
  "mean_thrust_n": 11316.491664725952,
- "pos_rms_m": 0.21305838730772436,
- "alt_rms_m": 0.023348587616989446,
+ "pos_rms_m": 0.21305838730772428,
+ "alt_rms_m": 0.023348587616988898,
  "tilt_rms_deg": 2.30139683260245,
  "success": true
 }

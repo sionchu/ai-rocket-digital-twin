@@ -1,0 +1,18 @@
+# Engine C: wide 80% bell, eps = 6 (vacuum-leaning; overexpanded at sea level and low throttle).
+schema_version: 1
+units: SI
+engine_design_id: bell_C
+family: bell
+throat_area_m2: 5.6e-3
+expansion_ratio: 6.0
+chamber_pressure_pa: 2.5e+6
+chamber_temperature_k: 3000.0
+gas: {gas_model_id: generic_hot_gas_v1, gamma: 1.2, molar_mass_kg_mol: 0.022}
+throttle_min: 0.4
+throttle_max: 1.0
+bell_length_fraction: 0.8
+bell_theta_n_rad: 0.4363323129985824   # 25 deg
+bell_theta_e_rad: 0.17453292519943295  # 10 deg
+bell_divergence_efficiency: 0.985
+engine_base_mass_kg: 45.0
+nozzle_wall_areal_density_kg_m2: 40.0

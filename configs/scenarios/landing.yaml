@@ -1,0 +1,9 @@
+name: descent_landing_60m
+mode: landing
+duration_s: 60.0
+com_position_w: [6.0, -4.0, 60.0]
+velocity_w: [1.0, 0.5, -6.0]
+tilt_axis: [0.0, 1.0, 0.0]
+tilt_rad: 0.05
+omega_b: [0.0, 0.0, 0.1]
+target_w: [0.0, 0.0, 0.0]

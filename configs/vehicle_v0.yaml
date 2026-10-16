@@ -1,0 +1,36 @@
+# Virtual VTVL vehicle v0. Body origin = mid-length on centerline, +Z_body = nose.
+schema_version: 1
+units: SI
+vehicle_id: vtvl_v0
+frame_convention: world_Z_up_body_Z_forward
+engine_design_id: conical_A
+aero_model_id: none_v0          # aerodynamics disabled in P0 (ADR-0004)
+mass:
+  structure_mass_kg: 700.0
+  structure_length_m: 7.0
+  structure_radius_m: 0.6
+  propellant_mass_kg: 450.0
+  tank_bottom_z_m: -2.2
+  tank_top_z_m: 1.5
+  tank_radius_m: 0.55
+  rcs_gas_mass_kg: 10.0
+  rcs_gas_z_m: 2.5
+  engine_throat_below_pivot_m: 0.25
+layout:
+  layout_id: gimbal2_rcs4_roll_v0
+  main_engine:
+    gimbal_pivot_body_m: [0.0, 0.0, -3.0]
+    thrust_axis_body: [0.0, 0.0, 1.0]
+    max_gimbal_rad: 0.10471975511965977      # 6 deg
+    max_gimbal_rate_rad_s: 0.3490658503988659 # 20 deg/s
+    throttle_time_constant_s: 0.15
+  rcs:   # cold-gas roll thrusters at the nose ring; pairs (01,03) +roll, (02,04) -roll
+    - {id: rcs_01, position_body_m: [0.6, 0.0, 3.0],  force_direction_body: [0.0, 1.0, 0.0],  max_thrust_n: 100.0, valve_delay_s: 0.02, min_on_time_s: 0.02, isp_s: 65.0}
+    - {id: rcs_02, position_body_m: [0.6, 0.0, 3.0],  force_direction_body: [0.0, -1.0, 0.0], max_thrust_n: 100.0, valve_delay_s: 0.02, min_on_time_s: 0.02, isp_s: 65.0}
+    - {id: rcs_03, position_body_m: [-0.6, 0.0, 3.0], force_direction_body: [0.0, -1.0, 0.0], max_thrust_n: 100.0, valve_delay_s: 0.02, min_on_time_s: 0.02, isp_s: 65.0}
+    - {id: rcs_04, position_body_m: [-0.6, 0.0, 3.0], force_direction_body: [0.0, 1.0, 0.0],  max_thrust_n: 100.0, valve_delay_s: 0.02, min_on_time_s: 0.02, isp_s: 65.0}
+gear:
+  foot_positions_body_m: [[1.6, 0.0, -3.9], [-1.6, 0.0, -3.9], [0.0, 1.6, -3.9], [0.0, -1.6, -3.9]]
+  stiffness_n_m: 1.0e+5
+  damping_n_s_m: 8.0e+3
+  friction_coeff: 0.6

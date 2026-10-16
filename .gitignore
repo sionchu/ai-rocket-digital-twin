@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+runs/**/trajectory.npz
+runs/cfd_cases/
+*.egg-info/

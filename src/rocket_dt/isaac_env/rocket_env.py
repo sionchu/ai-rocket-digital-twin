@@ -147,6 +147,10 @@ class VtvlEnvCfg(DirectRLEnvCfg):
     # reward (see docs/decisions/ADR-0009)
     rew_shaping_scale: float = 2.0
     phi_pos_m: float = 4.0  # potential divisor for horizontal position error [m]
+    # "basic": penalise |v_h| and tilt directly (r0-r2). "guided": penalise |v_h - v_h_ref(e_h)| with the PD
+    # baseline's horizontal law v_h_ref = -(kp/kd) e_h (0.6/1.4), capped at 2 m/s, and a softer tilt weight.
+    shaping: str = "basic"
+    phi_tilt_rad: float = 0.1
     rew_fuel_per_throttle: float = 0.004
     rew_action_rate: float = 0.01
     rew_td_base: float = 5.0
@@ -321,8 +325,15 @@ class VtvlEnv(DirectRLEnv):
     def _potential(self, p, v, rot, w_b):
         h = (p[:, 2] - self.td_com_z).clamp(min=0.0)
         vz_ref = -(0.3 * h).clamp(0.8, 6.0)  # same descent profile as the PD baseline (shaping only)
-        return -(torch.abs(v[:, 2] - vz_ref) / 2.0 + (p[:, :2] - self._target[:, :2]).norm(dim=1) / self.cfg.phi_pos_m
-                 + v[:, :2].norm(dim=1) / 1.0 + self._tilt(rot) / 0.1 + w_b.norm(dim=1) / 0.5)
+        e_h = p[:, :2] - self._target[:, :2]
+        if self.cfg.shaping == "guided":
+            v_ref = -(0.6 / 1.4) * e_h
+            v_ref = v_ref * (2.0 / v_ref.norm(dim=1, keepdim=True).clamp(min=2.0))
+            v_h_term = (v[:, :2] - v_ref).norm(dim=1)
+        else:
+            v_h_term = v[:, :2].norm(dim=1)
+        return -(torch.abs(v[:, 2] - vz_ref) / 2.0 + e_h.norm(dim=1) / self.cfg.phi_pos_m
+                 + v_h_term / 1.0 + self._tilt(rot) / self.cfg.phi_tilt_rad + w_b.norm(dim=1) / 0.5)
 
     def _get_dones(self):
         p, q, v, w_b = self._state()

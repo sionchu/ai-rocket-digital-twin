@@ -12,6 +12,7 @@ dependencies = ["numpy==2.5.3", "scipy==1.18.1", "pyyaml==6.0.1"]
 [project.optional-dependencies]
 test = ["pytest==9.1.1"]
 cea = ["cea==3.3.4"]
+video = ["matplotlib==3.10.7"]
 
 [project.scripts]
 rocket-dt = "rocket_dt.cli:main"

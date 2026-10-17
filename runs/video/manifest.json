@@ -1,0 +1,268 @@
+{
+ "label": "cloud-v1912 | Python reference 6-DoF (RK4) | PD baseline | low-fidelity replay, not Isaac",
+ "software": {
+  "python": "3.13.16",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "rocket_dt_commit": "215390c-dirty"
+ },
+ "segments": {
+  "engine_swap": {
+   "frames": 479,
+   "scenario": "descent_landing_60m",
+   "metrics": {
+    "conical_A": {
+     "scenario": "descent_landing_60m",
+     "termination_reason": "landed",
+     "duration_s": 17.16000000000087,
+     "fuel_used_kg": 77.4001871306811,
+     "rcs_gas_used_kg": 0.08785247373346294,
+     "engine_mass_kg": 47.185994835839175,
+     "dry_mass_kg": 747.1859948358392,
+     "max_tilt_deg": 11.889461107755176,
+     "gimbal_saturation_frac": 0.0,
+     "map_invalid_steps": 0,
+     "physics_valid": true,
+     "mean_throttle_engine_on": 0.6400854694885311,
+     "mean_thrust_n": 11993.999310673926,
+     "touchdown": {
+      "t": 14.175000000000816,
+      "vz": -0.8138919492689523,
+      "vh": 0.5132614373726295,
+      "tilt": 0.054053656249234125,
+      "pos_err": 0.28907861432725535,
+      "omega": 0.10204730702736683
+     },
+     "success": true,
+     "failure_reasons": [],
+     "final_tilt_deg": 0.07372326996387127
+    },
+    "bell_B": {
+     "scenario": "descent_landing_60m",
+     "termination_reason": "landed",
+     "duration_s": 17.16000000000087,
+     "fuel_used_kg": 77.24077308055945,
+     "rcs_gas_used_kg": 0.08785247373346294,
+     "engine_mass_kg": 46.79015488020359,
+     "dry_mass_kg": 746.7901548802035,
+     "max_tilt_deg": 11.890365783785462,
+     "gimbal_saturation_frac": 0.0,
+     "map_invalid_steps": 0,
+     "physics_valid": true,
+     "mean_throttle_engine_on": 0.6387664192553159,
+     "mean_thrust_n": 11990.693715532821,
+     "touchdown": {
+      "t": 14.175000000000816,
+      "vz": -0.8139265897088378,
+      "vh": 0.5120877657302974,
+      "tilt": 0.05406387356788384,
+      "pos_err": 0.2891366863949578,
+      "omega": 0.10185201184515949
+     },
+     "success": true,
+     "failure_reasons": [],
+     "final_tilt_deg": 0.07398012100203524
+    },
+    "bell_C": {
+     "scenario": "descent_landing_60m",
+     "termination_reason": "landed",
+     "duration_s": 17.16000000000087,
+     "fuel_used_kg": 80.5717897935512,
+     "rcs_gas_used_kg": 0.08785247373346294,
+     "engine_mass_kg": 48.69580577786324,
+     "dry_mass_kg": 748.6958057778633,
+     "max_tilt_deg": 11.880115621540716,
+     "gimbal_saturation_frac": 0.0,
+     "map_invalid_steps": 2405,
+     "physics_valid": false,
+     "mean_throttle_engine_on": 0.6663305588679613,
+     "mean_thrust_n": 11993.606022009226,
+     "touchdown": {
+      "t": 14.165000000000814,
+      "vz": -0.8304118753382509,
+      "vh": 0.5207663029587037,
+      "tilt": 0.05536329289656543,
+      "pos_err": 0.29543050945030597,
+      "omega": 0.10540085052945955
+     },
+     "success": true,
+     "failure_reasons": [],
+     "final_tilt_deg": 0.07367562350599778
+    }
+   }
+  },
+  "rcs_fault": {
+   "frames": 419,
+   "seed": 1001,
+   "metrics": {
+    "unknown": {
+     "scenario": "descent_landing_60m_s1001",
+     "termination_reason": "horizontal_speed",
+     "duration_s": 12.140000000000498,
+     "fuel_used_kg": 58.67226991990958,
+     "rcs_gas_used_kg": 0.0,
+     "engine_mass_kg": 47.185994835839175,
+     "dry_mass_kg": 747.1859948358392,
+     "max_tilt_deg": 59.33674808316913,
+     "gimbal_saturation_frac": 0.0,
+     "map_invalid_steps": 0,
+     "physics_valid": true,
+     "mean_throttle_engine_on": 0.6666978264246703,
+     "mean_thrust_n": 12574.232065718947,
+     "touchdown": {
+      "t": 10.310000000000212,
+      "vz": -1.3204983173264653,
+      "vh": 3.3372997454795157,
+      "tilt": 0.29046536177920124,
+      "pos_err": 2.4859786939605986,
+      "omega": 0.3191937606430921
+     },
+     "success": false,
+     "failure_reasons": [
+      "horizontal_speed",
+      "touchdown_tilt",
+      "position_error",
+      "tip_over",
+      "tip_over_or_loss_of_control"
+     ],
+     "final_tilt_deg": 59.33674808316913
+    },
+    "known": {
+     "scenario": "descent_landing_60m_s1001",
+     "termination_reason": "landed",
+     "duration_s": 14.760000000000908,
+     "fuel_used_kg": 65.72257907779027,
+     "rcs_gas_used_kg": 0.0,
+     "engine_mass_kg": 47.185994835839175,
+     "dry_mass_kg": 747.1859948358392,
+     "max_tilt_deg": 11.563600962772174,
+     "gimbal_saturation_frac": 0.0,
+     "map_invalid_steps": 0,
+     "physics_valid": true,
+     "mean_throttle_engine_on": 0.654243523729249,
+     "mean_thrust_n": 12301.923422675747,
+     "touchdown": {
+      "t": 11.77000000000044,
+      "vz": -0.8624152434736,
+      "vh": 0.9808147227974605,
+      "tilt": 0.07758748710956338,
+      "pos_err": 0.4517563108045773,
+      "omega": 0.2216795484168338
+     },
+     "success": true,
+     "failure_reasons": [],
+     "final_tilt_deg": 0.20066491701443448
+    }
+   }
+  },
+  "cfd_vs_1d": {
+   "frames": 479,
+   "metrics": {
+    "conical_A 1D map": {
+     "scenario": "descent_landing_60m",
+     "termination_reason": "landed",
+     "duration_s": 17.16000000000087,
+     "fuel_used_kg": 77.4001871306811,
+     "rcs_gas_used_kg": 0.08785247373346294,
+     "engine_mass_kg": 47.185994835839175,
+     "dry_mass_kg": 747.1859948358392,
+     "max_tilt_deg": 11.889461107755176,
+     "gimbal_saturation_frac": 0.0,
+     "map_invalid_steps": 0,
+     "physics_valid": true,
+     "mean_throttle_engine_on": 0.6400854694885311,
+     "mean_thrust_n": 11993.999310673926,
+     "touchdown": {
+      "t": 14.175000000000816,
+      "vz": -0.8138919492689523,
+      "vh": 0.5132614373726295,
+      "tilt": 0.054053656249234125,
+      "pos_err": 0.28907861432725535,
+      "omega": 0.10204730702736683
+     },
+     "success": true,
+     "failure_reasons": [],
+     "final_tilt_deg": 0.07372326996387127
+    },
+    "conical_A CFD map (v1912)": {
+     "scenario": "descent_landing_60m",
+     "termination_reason": "landed",
+     "duration_s": 17.16000000000087,
+     "fuel_used_kg": 77.1429235650507,
+     "rcs_gas_used_kg": 0.08785247373346294,
+     "engine_mass_kg": 47.185994835839175,
+     "dry_mass_kg": 747.1859948358392,
+     "max_tilt_deg": 11.888092609369242,
+     "gimbal_saturation_frac": 0.0,
+     "map_invalid_steps": 0,
+     "physics_valid": true,
+     "mean_throttle_engine_on": 0.6422476426628135,
+     "mean_thrust_n": 11995.354921666056,
+     "touchdown": {
+      "t": 14.175000000000816,
+      "vz": -0.813589342021652,
+      "vh": 0.5125691373250332,
+      "tilt": 0.05411002731727988,
+      "pos_err": 0.2893548397725412,
+      "omega": 0.10188447557850043
+     },
+     "success": true,
+     "failure_reasons": [],
+     "final_tilt_deg": 0.07419635078165408
+    },
+    "bell_B 1D map": {
+     "scenario": "descent_landing_60m",
+     "termination_reason": "landed",
+     "duration_s": 17.16000000000087,
+     "fuel_used_kg": 77.24077308055945,
+     "rcs_gas_used_kg": 0.08785247373346294,
+     "engine_mass_kg": 46.79015488020359,
+     "dry_mass_kg": 746.7901548802035,
+     "max_tilt_deg": 11.890365783785462,
+     "gimbal_saturation_frac": 0.0,
+     "map_invalid_steps": 0,
+     "physics_valid": true,
+     "mean_throttle_engine_on": 0.6387664192553159,
+     "mean_thrust_n": 11990.693715532821,
+     "touchdown": {
+      "t": 14.175000000000816,
+      "vz": -0.8139265897088378,
+      "vh": 0.5120877657302974,
+      "tilt": 0.05406387356788384,
+      "pos_err": 0.2891366863949578,
+      "omega": 0.10185201184515949
+     },
+     "success": true,
+     "failure_reasons": [],
+     "final_tilt_deg": 0.07398012100203524
+    },
+    "bell_B CFD map (v1912)": {
+     "scenario": "descent_landing_60m",
+     "termination_reason": "landed",
+     "duration_s": 17.16000000000087,
+     "fuel_used_kg": 78.0217069434135,
+     "rcs_gas_used_kg": 0.08785247373346294,
+     "engine_mass_kg": 46.79015488020359,
+     "dry_mass_kg": 746.7901548802035,
+     "max_tilt_deg": 11.88346655533606,
+     "gimbal_saturation_frac": 0.0,
+     "map_invalid_steps": 0,
+     "physics_valid": true,
+     "mean_throttle_engine_on": 0.6496351880629005,
+     "mean_thrust_n": 11986.697198306776,
+     "touchdown": {
+      "t": 14.170000000000815,
+      "vz": -0.8299479436977546,
+      "vh": 0.5175623397912625,
+      "tilt": 0.05478602377624879,
+      "pos_err": 0.2926713287100802,
+      "omega": 0.1048640544312885
+     },
+     "success": true,
+     "failure_reasons": [],
+     "final_tilt_deg": 0.0747581729615958
+    }
+   }
+  }
+ }
+}

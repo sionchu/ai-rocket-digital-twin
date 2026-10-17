@@ -7,3 +7,6 @@ runs/cfd_cases/
 runs/cfd/*_L*/
 runs/cfd_wsl-v2606/*_L*/
 runs/cfd_wsl-v2606.batch.log
+runs/ppo_win-isaac/assets/
+runs/ppo_win-isaac/*.log
+runs/ppo_win-isaac/train/*/git/

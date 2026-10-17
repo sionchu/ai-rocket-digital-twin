@@ -26,3 +26,12 @@ def batched_wrench(force_b: np.ndarray, pos_b: np.ndarray, com_b: np.ndarray) ->
     f = force_b.sum(axis=1)
     tau = np.cross(pos_b - com_b[:, None, :], force_b).sum(axis=1)
     return f[:, None, :], tau[:, None, :]
+
+
+def batched_wrench_torch(force_b, pos_b, com_b):
+    """Torch twin of `batched_wrench` (same shapes and math) for GPU env buffers."""
+    import torch
+
+    f = force_b.sum(dim=1)
+    tau = torch.linalg.cross(pos_b - com_b[:, None, :], force_b, dim=-1).sum(dim=1)
+    return f[:, None, :], tau[:, None, :]

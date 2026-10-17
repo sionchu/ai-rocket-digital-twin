@@ -310,6 +310,9 @@ class VtvlEnv(DirectRLEnv):
                              rcs_frac[..., None] * (self.act.fmax[:, None] * self.act.dir_b)[None]], dim=1)
         pos_b = torch.cat([self.pivot_b.expand(n, 1, 3), self.act.pos_b.expand(n, -1, 3)], dim=1)
         F, tau = batched_wrench_torch(force_b, pos_b, self.com_b.expand(n, 3))
+        # last physics step, for telemetry/visualisation only
+        self.last_f_main, self.last_valid, self.last_rcs_frac, self.last_pa = f_main, valid & main_on, rcs_frac, pa
+        self.last_F_b, self.last_tau_b, self.last_gimbal = F[:, 0], tau[:, 0], gim
         comp = self.robot.permanent_wrench_composer
         comp.set_forces_and_torques_index(forces=F, torques=tau, positions=None, is_global=False)
         comp.add_forces_and_torques_index(forces=self.wind_w[:, None], positions=None, is_global=True)

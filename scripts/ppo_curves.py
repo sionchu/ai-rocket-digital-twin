@@ -64,7 +64,12 @@ def main(runs):
         ax.set_xlabel("PPO iteration")
         ax.grid(alpha=0.3)
     axes[0, 0].legend(fontsize=8)
-    fig.suptitle("VtvlEnv PPO, win-isaac (r1-r3 fine-tuned from r0 iteration 149); dashed = LANDING_LIMITS", fontsize=10)
+    starts = []
+    for r in runs:
+        m = D / "train" / r / "manifest.json"
+        src = json.loads(m.read_text()).get("resumed_from") if m.exists() else None
+        starts.append(f"{r} <- {Path(src).parent.name}/{Path(src).stem}" if src else f"{r} from scratch")
+    fig.suptitle("VtvlEnv PPO, win-isaac: " + "; ".join(starts) + ". Dashed = LANDING_LIMITS", fontsize=9)
     fig.savefig(D / "curves.png", dpi=110)
     print("wrote", D / "curves.png")
 

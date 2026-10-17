@@ -13,3 +13,10 @@ runs/ppo_win-isaac/train/*/git/
 runs/ppo_win-isaac/evalsweep.log
 runs/ppo_win-isaac/eval_*.log
 runs/ppo_win-isaac/video_*.log
+.venv-hud/
+runs/ppo_win-isaac/mission/*/raw.mp4
+runs/ppo_win-isaac/mission/test_*/
+runs/ppo_win-isaac/train/*/*_eval_*.log
+runs/ppo_win-isaac/pd_isaac/*.log
+runs/ppo_win-isaac/mission_*.log
+runs/ppo_win-isaac/hud_pair.log

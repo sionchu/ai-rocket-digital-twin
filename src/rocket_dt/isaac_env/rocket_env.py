@@ -19,6 +19,7 @@ Landing success uses evaluation/simulate.py LANDING_LIMITS (ADR-0005, provisiona
 from __future__ import annotations
 
 import math
+import os
 from dataclasses import MISSING
 from pathlib import Path
 
@@ -193,6 +194,9 @@ class VtvlEnv(DirectRLEnv):
     cfg: VtvlEnvCfg
 
     def __init__(self, cfg: VtvlEnvCfg, render_mode: str | None = None, **kwargs):
+        # one USD per process: concurrent Isaac processes rewriting a shared file died silently at startup
+        usd = Path(cfg.robot.spawn.usd_path)
+        cfg.robot.spawn.usd_path = str(usd.with_name(f"{usd.stem}_{os.getpid()}{usd.suffix}"))
         self.asset_info = build_vehicle_usd(Path(cfg.robot.spawn.usd_path), cfg.engine)
         super().__init__(cfg, render_mode, **kwargs)
         if getattr(self, "_physics_handles_decimation", False):

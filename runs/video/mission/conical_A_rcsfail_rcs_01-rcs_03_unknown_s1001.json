@@ -1,0 +1,43 @@
+{
+ "label": "cloud-v1912 | Python reference 6-DoF + PD | exhaust outside nozzle is illustrative (1D Pe/Pa), CFD inset is solved",
+ "frames": 379,
+ "limits": {
+  "vz_max_m_s": 2.0,
+  "vh_max_m_s": 1.0,
+  "tilt_max_rad": 0.17453292519943295,
+  "pos_err_max_m": 2.0,
+  "final_tilt_max_rad": 0.2617993877991494
+ },
+ "metrics": {
+  "scenario": "descent_landing_60m_s1001",
+  "termination_reason": "horizontal_speed",
+  "duration_s": 12.140000000000498,
+  "fuel_used_kg": 58.67226991990958,
+  "rcs_gas_used_kg": 0.0,
+  "engine_mass_kg": 47.185994835839175,
+  "dry_mass_kg": 747.1859948358392,
+  "max_tilt_deg": 59.33674808316913,
+  "gimbal_saturation_frac": 0.0,
+  "map_invalid_steps": 0,
+  "physics_valid": true,
+  "mean_throttle_engine_on": 0.6666978264246703,
+  "mean_thrust_n": 12574.232065718947,
+  "touchdown": {
+   "t": 10.310000000000212,
+   "vz": -1.3204983173264653,
+   "vh": 3.3372997454795157,
+   "tilt": 0.29046536177920124,
+   "pos_err": 2.4859786939605986,
+   "omega": 0.3191937606430921
+  },
+  "success": false,
+  "failure_reasons": [
+   "horizontal_speed",
+   "touchdown_tilt",
+   "position_error",
+   "tip_over",
+   "tip_over_or_loss_of_control"
+  ],
+  "final_tilt_deg": 59.33674808316913
+ }
+}

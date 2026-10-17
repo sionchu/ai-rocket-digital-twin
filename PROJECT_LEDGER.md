@@ -1,6 +1,6 @@
 # PROJECT_LEDGER
 
-갱신: 2026-10-16. 표기: PASS / PARTIAL / FAIL / NOT_RUN / BLOCKED.
+갱신: 2026-10-17. 표기: PASS / PARTIAL / FAIL / NOT_RUN / BLOCKED.
 "시뮬레이션 판정"은 코드·테스트가 정의대로 동작했는지, "물리 타당성"은 그 결과를 실제 물리 근거(해석해, 실험, 독립 솔버)로 뒷받침했는지다. 프로젝트 전체 판정은 없다(전체 PASS 아님).
 
 ## 실행 환경 (결과마다 이 라벨을 붙인다)
@@ -8,7 +8,7 @@
 |---|---|
 | `cloud-v1912` | Claude 클라우드 컨테이너, Ubuntu 24.04, 4 CPU, GPU 없음, OpenFOAM ESI v1912 (Ubuntu 아카이브), Python 3.13.16, numpy 2.5.3, scipy 1.18.1 |
 | `wsl-v2606` | 사용자 PC (RTX 4070 Ti 12 GB, WSL Ubuntu 24.04, OpenFOAM v2606). **이 환경에서 실행한 결과는 아직 없음** |
-| `win-isaac` | 사용자 PC `C:\dev\IsaacLab`. **실행한 결과 없음**. VRAM 12 GB는 Isaac Lab 2.3 권장(16 GB)보다 작다 |
+| `win-isaac` | 사용자 PC Windows 11, RTX 4070 Ti 12 GB, 드라이버 610.88. **Isaac Lab 3.0.0** (`v3.0.0-beta2.patch1-5-g418ca31b4`, `C:\dev\IsaacLab`) + **Isaac Sim 6.0.1-rc.7** (`C:\isaacsim`), PhysX, kit python 3.12.13, torch 2.10.0+cu128, warp 1.13.0, numpy 2.3.1. `isaaclab.bat -p`로 실행(conda 없음). 목표 고정(2.3.2 + 5.1.0)과 다르다 |
 
 이 저장소의 모든 수치 결과는 `cloud-v1912`에서 나왔다. v2606 결과와 섞지 않는다.
 
@@ -17,10 +17,10 @@
 |---|---|---|---|---|
 | G0 뉴턴 역학·추진제 소비·토크 | PASS (31/31 테스트) | PASS: 해석해와 비교(자유낙하, 정적 호버, τ=r×F, 각운동량·에너지 보존 1e-7, RK4 4차 수렴 비 16±25%, ε 면적비, 추력계수 독립식, E0 손계산) | **PASS** | `runs/validate_physics/`, `tests/` |
 | G1 이론 노즐 vs CFD 수렴 | PASS: 3격자 모두 QA 통과, GCI 계산 | PARTIAL: 비점성 CFD vs 1D만 비교. 실험 데이터(Back–Massier–Gier, NPARC) 비교 NOT_RUN. 점성·분리 미모델. QA 규칙은 결과를 본 뒤 바꿨다(ADR-0006) | **PARTIAL** | `runs/cfd/cfd_summary.json`, `runs/cfd_experiments/summary.md` |
-| G2 설계 ID → 맵 → Isaac → 3D 리플레이 | PARTIAL: 설계 ID → CFD 맵(해시) → Python 6-DoF 주입까지 동작 | Isaac 적용 BLOCKED(클라우드), CadQuery CAD NOT_RUN, 3D 리플레이 NOT_RUN | **PARTIAL** | `runs/cfd/maps/*.json`, `runs/cfd_experiments/` |
+| G2 설계 ID → 맵 → Isaac → 3D 리플레이 | PARTIAL: 설계 ID → CFD 맵(해시) → Python 6-DoF 주입까지 동작. Isaac 단일 강체 힘·토크 적용 PASS (`win-isaac`) | 맵 → Isaac env 연결 NOT_RUN, CadQuery CAD NOT_RUN, 3D 리플레이 NOT_RUN | **PARTIAL** | `runs/cfd/maps/*.json`, `runs/cfd_experiments/` |
 | G3 기준선 호버·자세·접촉 | PASS (Python 참조): 호버 위치 RMS 0.21 m, 착륙 30/30 × A/B/C | PARTIAL: 참값 상태, 센서 노이즈·지연 없음, 공력 없음, 접촉은 페널티 모델. Isaac 접촉 비교 NOT_RUN | **PARTIAL** | `runs/p0_experiments/summary.md` |
-| G4 PPO 착륙 | BLOCKED (클라우드 GPU 없음) | — | **BLOCKED** (이관 경로: `win-isaac`) | ADR-0001, 03 보고서 |
-| G5 파인튜닝 전·후 | BLOCKED | — | **BLOCKED** | — |
+| G4 PPO 착륙 | NOT_RUN (`win-isaac` GPU 확보, VtvlEnv 미구현) | — | **NOT_RUN** | ADR-0001, 03 보고서 |
+| G5 파인튜닝 전·후 | NOT_RUN | — | **NOT_RUN** | — |
 | G6 surrogate 오차·OOD | NOT_RUN (CFD 설계 2개뿐, ADR-0007은 8–12개 요구) | — | **NOT_RUN** | ADR-0007 |
 
 ## 검증 항목 (사용자 리뷰 2026-10-16 대응)
@@ -34,7 +34,8 @@
 | OpenFOAM CFD | **PARTIAL** (`cloud-v1912`) | wedge ±2.5°, 1셀 두께, front/back `wedge` 패치, 축 면 붕괴(크기 0), checkMesh "Mesh OK" 6/6. 수렴: 마지막 8기록 창에서 추력 리플 < 5e-4, 질량 불균형 ≤ 3e-4. 비점성·slip 벽 |
 | 3단계 격자 GCI | **PASS** (수치) | 격자비 1.5. stream thrust GCI_fine: A 0.135% (p = 0.92), B 0.089% (p = 1.51). 점근비 1.000 / 1.001, 단조 수렴 |
 | CFD vs 1D | 결과 | A: F −0.37%, ṁ −0.67% (목 유량계수 효과). B: F −1.88%. **1D에서 가정한 벨 λ = 0.985는 이 윤곽에서 CFD로 뒷받침되지 않는다.** 이 매개변수화의 bell_B는 conical_A보다 해면 추력이 1.3% 낮다 |
-| Isaac Sim / PPO | **BLOCKED** (클라우드) | GPU 없음(`nvidia-smi` 없음). 사용자 PC로 이관 가능. 영구 차단 아님 |
+| Isaac 힘 스모크 (`win-isaac`) | **PASS** | 단일 강체 4 env, dt 5 ms × 10 스텝. MassModel(vehicle_v0 + conical_A, 추진제 가득) m 1207.186 kg, CoM z −0.2276 m, I diag(4016.0, 4016.0, 320.06)를 PhysX에서 다시 읽어 일치 확인. `batched_wrench` → `permanent_wrench_composer.set_forces_and_torques_index(positions=None, is_global=False)`. Reference6DoF(RK4, 같은 dt) 대비 상대오차: 선가속도 2.9e-7 / 9.5e-5 / 6.6e-5 / 2.6e-3, 각가속도 – (참값 0, Isaac 0) / 2.0e-7 / 2.0e-5 / 2.4e-3 (마지막은 ω0 = (0.2, −0.1, 0.8) rad/s 자이로 항, 적분기 차이). 기준 1% / 2%. 쿼터니언 순서: rocket_dt wxyz, Isaac Lab 3.x xyzw (ADR-0002의 '같다'는 3.x에서 틀림). 발견: `set_inertias_index`로 축대칭 관성(I_xx = I_yy)을 쓰면 PhysX `setCMassLocalPose pose is not valid`와 함께 동역학이 틀어진다. USD MassAPI로 리셋 전에 지정해서 우회. 변질량 env에서 다시 다뤄야 함. `runs/isaac_smoke_win-isaac/` |
+| PPO | **NOT_RUN** | GPU 환경(`win-isaac`)은 확보, VtvlEnv 미구현 |
 
 ## 고정 버전
 ADR-0001 참고. 실제 사용: Python 3.13.16, numpy 2.5.3, scipy 1.18.1, OpenFOAM v1912. 목표 고정: OpenFOAM v2606, Isaac Lab v2.3.2 + Isaac Sim 5.1.0, rsl-rl-lib 3.1.2, cea 3.3.4.

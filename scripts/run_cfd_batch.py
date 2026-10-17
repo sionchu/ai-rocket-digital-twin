@@ -31,19 +31,32 @@ def sh(case: Path, cmd: str, log: str) -> int:
     return subprocess.run(["bash", "-c", full]).returncode
 
 
+def foam_version() -> str:
+    return subprocess.run(["bash", "-c", f"source {BASHRC} >/dev/null 2>&1; echo $WM_PROJECT_VERSION"],
+                          capture_output=True, text=True).stdout.strip()
+
+
+def block_mesh_cmd(ver: str) -> str:
+    """The wedge collapses the axis by coincident (not shared) vertices. v1912 blockMesh merges
+    points geometrically by default; later ESI releases merge topologically and keep zero-area
+    axis faces (checkMesh fails), so request the v1912 behaviour explicitly there."""
+    num = int("".join(ch for ch in ver if ch.isdigit()) or 0)
+    return "blockMesh -merge-points" if num > 1912 else "blockMesh"
+
+
 def run_case(args):
     eng_name, level, out = args
     e = load_engine(REPO / f"configs/engines/{eng_name}.yaml")
     case = write_case(e, Path(out), level=level)
+    ver = foam_version()
     t0 = time.time()
-    rc = {"blockMesh": sh(case, "blockMesh", "log.blockMesh"), "checkMesh": sh(case, "checkMesh", "log.checkMesh")}
+    rc = {"blockMesh": sh(case, block_mesh_cmd(ver), "log.blockMesh"),
+          "checkMesh": sh(case, "checkMesh", "log.checkMesh")}
     post.init_isentropic(case, e)
     rc["rhoCentralFoam"] = sh(case, "rhoCentralFoam", "log.rhoCentralFoam")
     wall = time.time() - t0
     hist = post.history(case) if rc["rhoCentralFoam"] == 0 else []
     q = post.qa(case, hist) if hist else {"status": "FAIL", "reason": f"solver rc={rc['rhoCentralFoam']}"}
-    ver = subprocess.run(["bash", "-c", f"source {BASHRC} >/dev/null 2>&1; echo $WM_PROJECT_VERSION"],
-                         capture_output=True, text=True).stdout.strip()
     res = {"engine": eng_name, "level": level, "case": str(case), "returncodes": rc, "wall_time_s": wall,
            "openfoam_version": ver, "qa": q, "history": hist,
            "mesh_ok": "Mesh OK" in (case / "log.checkMesh").read_text()}

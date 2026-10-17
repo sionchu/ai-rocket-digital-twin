@@ -5,3 +5,5 @@ runs/**/trajectory.npz
 runs/cfd_cases/
 *.egg-info/
 runs/cfd/*_L*/
+runs/cfd_wsl-v2606/*_L*/
+runs/cfd_wsl-v2606.batch.log

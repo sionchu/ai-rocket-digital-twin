@@ -80,3 +80,16 @@ def test_torch_wrench_matches_reference():
     for i in range(3):
         rf, rt = total_wrench_body([PointForce(str(k), f[i, k], p[i, k]) for k in range(5)], com[i])
         assert np.allclose(F[i, 0].numpy(), rf) and np.allclose(T[i, 0].numpy(), rt)
+
+
+def test_stacked_maps_select_per_env():
+    maps = []
+    for name in ("conical_A", "bell_B", "bell_C"):
+        maps.append(build_ideal_map(_setup(name)[1]))
+    tmap = tm.TorchPerfMap(maps, "cpu")
+    thr = torch.tensor([0.5, 0.5, 0.5, 0.9])
+    pa = torch.tensor([101325.0] * 4)
+    f, _, ok = tmap.lookup(thr, pa, torch.tensor([0, 1, 2, 2]))
+    for k, (m, t) in enumerate(zip([maps[0], maps[1], maps[2], maps[2]], thr.tolist())):
+        rf, _, _, rok = m.lookup(t, 101325.0)
+        assert abs(f[k].item() - rf) / rf < 1e-5 and bool(ok[k]) == rok

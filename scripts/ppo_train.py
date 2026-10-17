@@ -33,6 +33,9 @@ parser.add_argument("--rew_fuel_per_throttle", type=float, default=None)
 parser.add_argument("--phi_pos_m", type=float, default=None)
 parser.add_argument("--phi_tilt_rad", type=float, default=None)
 parser.add_argument("--shaping", default=None, choices=["basic", "guided"])
+parser.add_argument("--engine_mix", nargs="+", default=None, help="e.g. conical_A bell_B bell_C")
+parser.add_argument("--rew_td_vz_margin", type=float, default=None)
+parser.add_argument("--rew_td_vz_target", type=float, default=None)
 parser.add_argument("--resume_from", default=None, help="checkpoint to initialise from (fine-tune)")
 parser.add_argument("--save_interval", type=int, default=50)
 AppLauncher.add_app_launcher_args(parser)
@@ -92,7 +95,7 @@ def main():
     env_cfg = VtvlEnvCfg()
     env_cfg.scene.num_envs = args.num_envs
     env_cfg.seed = args.seed
-    for k in ("rew_shaping_scale", "rew_td_success", "rew_fuel_per_throttle", "phi_pos_m", "phi_tilt_rad", "shaping"):
+    for k in ("rew_shaping_scale", "rew_td_success", "rew_fuel_per_throttle", "phi_pos_m", "phi_tilt_rad", "shaping", "engine_mix", "rew_td_vz_margin", "rew_td_vz_target"):
         if getattr(args, k) is not None:
             setattr(env_cfg, k, getattr(args, k))
     agent = VtvlPPOCfg()
@@ -109,7 +112,7 @@ def main():
     env = VtvlEnv(env_cfg)
     manifest = {"label": "win-isaac", "argv": sys.argv, "software": versions(), "map_hash": env.map_hash,
                 "engine": env_cfg.engine, "map_source": env_cfg.map_source, "asset": env.asset_info,
-                "env_cfg": {k: getattr(env_cfg, k) for k in dir(env_cfg) if k.startswith(("rew_", "phi_")) or k in (
+                "env_cfg": {k: getattr(env_cfg, k) for k in dir(env_cfg) if k.startswith(("rew_", "phi_")) or k in ("engine_mix", 
                     "shaping", "decimation", "episode_length_s", "terminate_at_touchdown", "touchdown_height_m", "throttle0")},
                 "agent_cfg": agent.to_dict()}
     (log_dir / "manifest.json").write_text(json.dumps(manifest, indent=1, default=str))

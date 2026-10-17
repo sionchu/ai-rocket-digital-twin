@@ -128,7 +128,10 @@ class VtvlEnvCfg(DirectRLEnvCfg):
                                   resolution=(960, 540))
     robot: RigidObjectCfg = MISSING  # filled in __post_init__ from the generated USD
 
-    engine: str = "conical_A"
+    engine: str = "conical_A"  # also sets the rigid-body mass properties (USD) for every env
+    # mixed-engine training: each env samples its thrust map from this list at reset. Mass properties stay
+    # those of `engine` (A/B/C differ by <= 1.5 kg, 4 mm CoM, 0.4 % inertia; per-env mass is not settable, ADR-0009)
+    engine_mix: list | None = None
     map_source: str = "ideal1d"  # ideal1d | cfd (runs/cfd/maps/<engine>_cfd.json, cloud-v1912)
     asset_dir: str = str(REPO / "runs/ppo_win-isaac/assets")
     throttle0: float = 0.7  # evaluation/simulate.py ActuatorModel(throttle0=0.7)
@@ -155,6 +158,8 @@ class VtvlEnvCfg(DirectRLEnvCfg):
     rew_action_rate: float = 0.01
     rew_td_base: float = 5.0
     rew_td_success: float = 10.0
+    rew_td_vz_target: float = 1.2  # touchdown |vz| above this is penalised (margin below the 2.0 m/s limit)
+    rew_td_vz_margin: float = 0.0  # penalty per m/s above the target (0 = off, r0-r3)
     rew_crash: float = -10.0
     rew_timeout: float = -10.0
 
@@ -198,12 +203,17 @@ class VtvlEnv(DirectRLEnv):
         self.eng = load_engine(REPO / f"configs/engines/{cfg.engine}.yaml")
         mm = MassModel(self.veh, self.eng)
         ms = mm.evaluate(mm.prop0, mm.rcs0)
-        if cfg.map_source == "ideal1d":
-            pm = build_ideal_map(self.eng)
-        else:
-            pm = EnginePerformanceMap.load(REPO / f"runs/cfd/maps/{cfg.engine}_cfd.json")
-        self.map_hash = pm.content_hash()
-        self.map = TorchPerfMap(pm, dev)
+        self.engine_names = list(cfg.engine_mix) if cfg.engine_mix else [cfg.engine]
+        pms = []
+        for name in self.engine_names:
+            if cfg.map_source == "ideal1d":
+                pms.append(build_ideal_map(load_engine(REPO / f"configs/engines/{name}.yaml")))
+            else:
+                pms.append(EnginePerformanceMap.load(REPO / f"runs/cfd/maps/{name}_cfd.json"))
+        self.map_hashes = {name: pm.content_hash() for name, pm in zip(self.engine_names, pms)}
+        self.map_hash = self.map_hashes[self.engine_names[0]] if len(pms) == 1 else self.map_hashes
+        self.map = TorchPerfMap(pms, dev)
+        self.engine_idx = torch.zeros(n, dtype=torch.long, device=dev)
         self.act = TorchActuators(self.veh, self.eng, n, self.step_dt, dev)
         self.mass = float(ms.mass_kg)
         self.com_b = torch.tensor(ms.com_body_m, **f)
@@ -285,7 +295,7 @@ class VtvlEnv(DirectRLEnv):
             self.act.engine_on &= ~new_td
         thr, gim, frac = self.act.step(self.t, dt)
         pa = isa_pressure(p[:, 2].clamp(min=0.0))
-        f_main, mdot_main, valid = self.map.lookup(thr, pa)
+        f_main, mdot_main, valid = self.map.lookup(thr, pa, self.engine_idx)
         main_on = self.act.engine_on & (self.m_prop > 0)
         f_main = torch.where(main_on, f_main, torch.zeros_like(f_main))
         mdot_main = torch.where(main_on, mdot_main, torch.zeros_like(mdot_main))
@@ -306,7 +316,8 @@ class VtvlEnv(DirectRLEnv):
 
     # ---------------------------------------------------------------- obs / reward / dones
     def _available_thrust_norm(self, p):
-        fmax, _, _ = self.map.lookup(torch.full_like(p[:, 2], self.act.tmax), isa_pressure(p[:, 2].clamp(min=0.0)))
+        fmax, _, _ = self.map.lookup(torch.full_like(p[:, 2], self.act.tmax), isa_pressure(p[:, 2].clamp(min=0.0)),
+                                     self.engine_idx)
         return fmax / (self.mass * G0)
 
     def _get_observations(self) -> dict:
@@ -380,7 +391,8 @@ class VtvlEnv(DirectRLEnv):
                       - 2.0 * (self.td_vh - L["vh_max_m_s"]).clamp(min=0.0)
                       - 1.0 * (self.td_pos - L["pos_err_max_m"]).clamp(min=0.0)
                       - 20.0 * (self.td_tilt - L["tilt_max_rad"]).clamp(min=0.0)
-                      - 0.5 * self.td_vz.abs() - 0.5 * self.td_pos)
+                      - 0.5 * self.td_vz.abs() - 0.5 * self.td_pos
+                      - self.cfg.rew_td_vz_margin * (self.td_vz.abs() - self.cfg.rew_td_vz_target).clamp(min=0.0))
         succ = self._success()
         r += torch.where(self._settled & ~self._tip, td_quality + self.cfg.rew_td_success * succ.float(), torch.zeros_like(r))
         r += torch.where(self._tip | self._oob, torch.full_like(r, self.cfg.rew_crash), torch.zeros_like(r))
@@ -404,7 +416,7 @@ class VtvlEnv(DirectRLEnv):
                 reason.append("landed")
             else:
                 reason.append("landing_limits")
-        return [{"env": int(i), "scenario_index": int(i + (int(self._episode_count[i]) - 1) * self.num_envs),
+        return [{"env": int(i), "engine": self.engine_names[int(self.engine_idx[i])], "scenario_index": int(i + (int(self._episode_count[i]) - 1) * self.num_envs),
                  "success": bool(succ[k]), "termination_reason": reason[k],
                  "touchdown": bool(self.td[i]), "td_vz": float(self.td_vz[i]), "td_vh": float(self.td_vh[i]),
                  "td_tilt_deg": float(torch.rad2deg(self.td_tilt[i])), "td_pos_err": float(self.td_pos[i]),
@@ -435,6 +447,11 @@ class VtvlEnv(DirectRLEnv):
                     "Episode_Termination/oob": self._oob[done_ids].float().mean().item(),
                     "Episode_Termination/timeout": self._timeout[done_ids].float().mean().item(),
                     "Metrics/physics_valid_rate": (self.invalid_steps[done_ids] == 0).float().mean().item()}
+                if len(self.engine_names) > 1:
+                    for k, name in enumerate(self.engine_names):
+                        sel = self.engine_idx[done_ids] == k
+                        if sel.any():
+                            self.extras["log"][f"Metrics/success_rate_{name}"] = succ[sel].mean().item()
         self.robot.reset(env_ids)
         super()._reset_idx(env_ids)
         n = len(env_ids)
@@ -468,6 +485,8 @@ class VtvlEnv(DirectRLEnv):
         w_w = (rot @ w_b[..., None]).squeeze(-1)
         self.robot.write_root_com_velocity_to_sim_index(root_velocity=torch.cat([vel, w_w], 1), env_ids=env_ids)
         self.wind_w[env_ids] = wind
+        if len(self.engine_names) > 1 and self.cfg.eval_scenarios is None:
+            self.engine_idx[env_ids] = torch.randint(len(self.engine_names), (n,), device=dev)
         self.act.reset(env_ids, self.cfg.throttle0)
         self.m_prop[env_ids] = self.prop0
         self.m_rcs[env_ids] = self.rcs0

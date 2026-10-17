@@ -10,6 +10,7 @@ Out-of-box map queries cannot raise on the GPU: they are clamped to the box and 
 """
 from __future__ import annotations
 
+import numpy as np
 import torch
 
 from rocket_dt.dynamics.frames import G0
@@ -29,13 +30,19 @@ def gimbal_direction(gimbal: torch.Tensor) -> torch.Tensor:
 
 
 class TorchPerfMap:
-    def __init__(self, m: EnginePerformanceMap, device):
+    """One map, or several maps on the same (throttle, pa) grid stacked so each env can use its own (idx)."""
+
+    def __init__(self, m: EnginePerformanceMap | list[EnginePerformanceMap], device):
+        ms = m if isinstance(m, list) else [m]
+        for o in ms[1:]:
+            if not (np.array_equal(o.throttle, ms[0].throttle) and np.array_equal(o.ambient_pressure_pa, ms[0].ambient_pressure_pa)):
+                raise ValueError("stacked maps must share the throttle / ambient pressure grid")
         f = dict(dtype=torch.float32, device=device)
-        self.thr = torch.tensor(m.throttle, **f)
-        self.pa = torch.tensor(m.ambient_pressure_pa, **f)
-        self.F = torch.tensor(m.values["thrust_n"], **f)
-        self.mdot = torch.tensor(m.values["mass_flow_kg_s"], **f)
-        self.valid = torch.tensor(m.valid, dtype=torch.bool, device=device)
+        self.thr = torch.tensor(ms[0].throttle, **f)
+        self.pa = torch.tensor(ms[0].ambient_pressure_pa, **f)
+        self.F = torch.tensor(np.stack([o.values["thrust_n"] for o in ms]), **f)
+        self.mdot = torch.tensor(np.stack([o.values["mass_flow_kg_s"] for o in ms]), **f)
+        self.valid = torch.tensor(np.stack([o.valid for o in ms]), dtype=torch.bool, device=device)
 
     @staticmethod
     def _locate(axis, v):
@@ -45,14 +52,15 @@ class TorchPerfMap:
         t = ((vc - axis[i]) / (axis[i + 1] - axis[i])).clamp(0.0, 1.0)
         return i, t, inside
 
-    def lookup(self, throttle: torch.Tensor, pa: torch.Tensor):
-        """Returns thrust [N], mass flow [kg/s], valid (bool) for each env."""
+    def lookup(self, throttle: torch.Tensor, pa: torch.Tensor, idx: torch.Tensor | None = None):
+        """Returns thrust [N], mass flow [kg/s], valid (bool) for each env; idx selects the stacked map."""
         i, s, in_t = self._locate(self.thr, throttle)
         j, t, in_p = self._locate(self.pa, pa)
+        k = torch.zeros_like(i) if idx is None else idx
         w = torch.stack([(1 - s) * (1 - t), (1 - s) * t, s * (1 - t), s * t], dim=-1)
 
         def corners(a):
-            return torch.stack([a[i, j], a[i, j + 1], a[i + 1, j], a[i + 1, j + 1]], dim=-1)
+            return torch.stack([a[k, i, j], a[k, i, j + 1], a[k, i + 1, j], a[k, i + 1, j + 1]], dim=-1)
 
         f = (w * corners(self.F)).sum(-1)
         md = (w * corners(self.mdot)).sum(-1)

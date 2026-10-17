@@ -7,16 +7,16 @@
 | 라벨 | 내용 |
 |---|---|
 | `cloud-v1912` | Claude 클라우드 컨테이너, Ubuntu 24.04, 4 CPU, GPU 없음, OpenFOAM ESI v1912 (Ubuntu 아카이브), Python 3.13.16, numpy 2.5.3, scipy 1.18.1 |
-| `wsl-v2606` | 사용자 PC (RTX 4070 Ti 12 GB, WSL Ubuntu 24.04, OpenFOAM v2606). **이 환경에서 실행한 결과는 아직 없음** |
+| `wsl-v2606` | 사용자 PC, i5-13600KF (14코어/20스레드), WSL2 Ubuntu 24.04, OpenFOAM ESI v2606 (`/usr/lib/openfoam/openfoam2606`), Python 3.12.3, numpy 2.5.3, scipy 1.18.1. 저장소는 WSL 내부 파일시스템에서 실행 |
 | `win-isaac` | 사용자 PC Windows 11, RTX 4070 Ti 12 GB, 드라이버 610.88. **Isaac Lab 3.0.0** (`v3.0.0-beta2.patch1-5-g418ca31b4`, `C:\dev\IsaacLab`) + **Isaac Sim 6.0.1-rc.7** (`C:\isaacsim`), PhysX, kit python 3.12.13, torch 2.10.0+cu128, warp 1.13.0, numpy 2.3.1. `isaaclab.bat -p`로 실행(conda 없음). 목표 고정(2.3.2 + 5.1.0)과 다르다 |
 
-이 저장소의 모든 수치 결과는 `cloud-v1912`에서 나왔다. v2606 결과와 섞지 않는다.
+`runs/cfd/`, `runs/cfd_experiments/`, `runs/p0_experiments/`, `runs/validate_physics/`는 `cloud-v1912` 결과다. `wsl-v2606` 결과는 `runs/cfd_wsl-v2606/`, `win-isaac` 결과는 `runs/isaac_smoke_win-isaac/`에만 있다. 서로 섞지 않는다.
 
 ## 게이트
 | 게이트 | 시뮬레이션 판정 | 물리 타당성 | 종합 | 증거 |
 |---|---|---|---|---|
 | G0 뉴턴 역학·추진제 소비·토크 | PASS (31/31 테스트) | PASS: 해석해와 비교(자유낙하, 정적 호버, τ=r×F, 각운동량·에너지 보존 1e-7, RK4 4차 수렴 비 16±25%, ε 면적비, 추력계수 독립식, E0 손계산) | **PASS** | `runs/validate_physics/`, `tests/` |
-| G1 이론 노즐 vs CFD 수렴 | PASS: 3격자 모두 QA 통과, GCI 계산 | PARTIAL: 비점성 CFD vs 1D만 비교. 실험 데이터(Back–Massier–Gier, NPARC) 비교 NOT_RUN. 점성·분리 미모델. QA 규칙은 결과를 본 뒤 바꿨다(ADR-0006) | **PARTIAL** | `runs/cfd/cfd_summary.json`, `runs/cfd_experiments/summary.md` |
+| G1 이론 노즐 vs CFD 수렴 | PASS: 3격자 모두 QA 통과, GCI 계산. v2606에서 1e-4 이내로 재현(`wsl-v2606`) | PARTIAL: 비점성 CFD vs 1D만 비교. 실험 데이터(Back–Massier–Gier, NPARC) 비교 NOT_RUN. 점성·분리 미모델. QA 규칙은 결과를 본 뒤 바꿨다(ADR-0006) | **PARTIAL** | `runs/cfd/cfd_summary.json`, `runs/cfd_experiments/summary.md` |
 | G2 설계 ID → 맵 → Isaac → 3D 리플레이 | PARTIAL: 설계 ID → CFD 맵(해시) → Python 6-DoF 주입까지 동작. Isaac 단일 강체 힘·토크 적용 PASS (`win-isaac`) | 맵 → Isaac env 연결 NOT_RUN, CadQuery CAD NOT_RUN, 3D 리플레이 NOT_RUN | **PARTIAL** | `runs/cfd/maps/*.json`, `runs/cfd_experiments/` |
 | G3 기준선 호버·자세·접촉 | PASS (Python 참조): 호버 위치 RMS 0.21 m, 착륙 30/30 × A/B/C | PARTIAL: 참값 상태, 센서 노이즈·지연 없음, 공력 없음, 접촉은 페널티 모델. Isaac 접촉 비교 NOT_RUN | **PARTIAL** | `runs/p0_experiments/summary.md` |
 | G4 PPO 착륙 | NOT_RUN (`win-isaac` GPU 확보, VtvlEnv 미구현) | — | **NOT_RUN** | ADR-0001, 03 보고서 |
@@ -33,12 +33,14 @@
 | RCS 2개 고장(+롤 권한 상실) | **PARTIAL** | 롤 권한이 한쪽만 남으면 heading 유지를 포기하고 롤 감쇠만 하도록 전환: 고장 인지 시 30/30. **고장 미인지 시 19/30 (Wilson [0.46, 0.78])**. 고장 검출(FDIR)이 없어서다. 남은 취약점 |
 | OpenFOAM CFD | **PARTIAL** (`cloud-v1912`) | wedge ±2.5°, 1셀 두께, front/back `wedge` 패치, 축 면 붕괴(크기 0), checkMesh "Mesh OK" 6/6. 수렴: 마지막 8기록 창에서 추력 리플 < 5e-4, 질량 불균형 ≤ 3e-4. 비점성·slip 벽 |
 | 3단계 격자 GCI | **PASS** (수치) | 격자비 1.5. stream thrust GCI_fine: A 0.135% (p = 0.92), B 0.089% (p = 1.51). 점근비 1.000 / 1.001, 단조 수렴 |
+| OpenFOAM CFD 재현 (`wsl-v2606`) | **PASS** (재현) | 같은 케이스 생성기, 같은 6케이스. 차이 하나: v2606 blockMesh 기본값이 위상 병합이라 축의 겹친 꼭짓점이 병합되지 않아 면적 0 면 120–270개가 남고 checkMesh 2항목 실패. v1912 기본값과 같은 기하 병합(`blockMesh -merge-points`)을 v1912보다 새 버전에서만 쓰도록 `scripts/run_cfd_batch.py`에 넣었다(케이스 파일은 그대로). 이후 checkMesh "Mesh OK" 6/6, 축 패치 0면, QA PASS 6/6. 창 평균 추력·ṁ의 v1912 대비 상대차: conical_A L1/L2/L3 F −1.9e-6 / +3.8e-5 / −2.9e-5, ṁ −6.3e-6 / +2.9e-5 / −4.7e-5. bell_B F −2.5e-5 / −2.0e-5 / +3.3e-5, ṁ −2.4e-5 / −4.5e-5 / +6.0e-6. 모두 절대 상대차 < 1e-4, GCI_fine보다 한 자릿수 이상 작다. 6잡 병렬, 케이스 벽시간 합 11,973 s(최대 L3 4,128 s), 전체 1 h 9 min. `runs/cfd_wsl-v2606/compare_vs_cloud-v1912.json` |
+| 3단계 격자 GCI (`wsl-v2606`) | **PASS** (수치) | stream thrust GCI_fine: A 0.068% (p = 1.41, 점근비 1.0004), B 0.117% (p = 1.31, 1.0007). ṁ GCI_fine: A 0.042% (p = 1.37), B 0.034% (p = 1.29). 단조 수렴. p는 v1912(A 0.92, B 1.51)와 다르다: 격자 간 차이가 1e-3 수준이라 1e-5 수준의 솔버 차이에도 p가 크게 흔들린다. 외삽 추력 차 A −0.056%, B +0.026%로 GCI 안. 맵 해시는 값이 미세하게 달라 다르다(A 197f75f8a2d29c82, B 861c24d92a84263f) |
 | CFD vs 1D | 결과 | A: F −0.37%, ṁ −0.67% (목 유량계수 효과). B: F −1.88%. **1D에서 가정한 벨 λ = 0.985는 이 윤곽에서 CFD로 뒷받침되지 않는다.** 이 매개변수화의 bell_B는 conical_A보다 해면 추력이 1.3% 낮다 |
 | Isaac 힘 스모크 (`win-isaac`) | **PASS** | 단일 강체 4 env, dt 5 ms × 10 스텝. MassModel(vehicle_v0 + conical_A, 추진제 가득) m 1207.186 kg, CoM z −0.2276 m, I diag(4016.0, 4016.0, 320.06)를 PhysX에서 다시 읽어 일치 확인. `batched_wrench` → `permanent_wrench_composer.set_forces_and_torques_index(positions=None, is_global=False)`. Reference6DoF(RK4, 같은 dt) 대비 상대오차: 선가속도 2.9e-7 / 9.5e-5 / 6.6e-5 / 2.6e-3, 각가속도 – (참값 0, Isaac 0) / 2.0e-7 / 2.0e-5 / 2.4e-3 (마지막은 ω0 = (0.2, −0.1, 0.8) rad/s 자이로 항, 적분기 차이). 기준 1% / 2%. 쿼터니언 순서: rocket_dt wxyz, Isaac Lab 3.x xyzw (ADR-0002의 '같다'는 3.x에서 틀림). 발견: `set_inertias_index`로 축대칭 관성(I_xx = I_yy)을 쓰면 PhysX `setCMassLocalPose pose is not valid`와 함께 동역학이 틀어진다. USD MassAPI로 리셋 전에 지정해서 우회. 변질량 env에서 다시 다뤄야 함. `runs/isaac_smoke_win-isaac/` |
 | PPO | **NOT_RUN** | GPU 환경(`win-isaac`)은 확보, VtvlEnv 미구현 |
 
 ## 고정 버전
-ADR-0001 참고. 실제 사용: Python 3.13.16, numpy 2.5.3, scipy 1.18.1, OpenFOAM v1912. 목표 고정: OpenFOAM v2606, Isaac Lab v2.3.2 + Isaac Sim 5.1.0, rsl-rl-lib 3.1.2, cea 3.3.4.
+ADR-0001 참고. 실제 사용: `cloud-v1912` Python 3.13.16, numpy 2.5.3, scipy 1.18.1, OpenFOAM v1912. `wsl-v2606` Python 3.12.3, OpenFOAM v2606. `win-isaac` Isaac Lab 3.0.0 + Isaac Sim 6.0.1-rc.7 (목표 고정과 다름). 목표 고정: OpenFOAM v2606, Isaac Lab v2.3.2 + Isaac Sim 5.1.0, rsl-rl-lib 3.1.2, cea 3.3.4.
 
 ## 결정
 ADR-0001 툴체인 · 0002 좌표계 · 0003 적분 소유자/backend/추력 적용 · 0004 P0 단순화 · 0005 착륙 판정(잠정) · 0006 CFD 설정 · 0007 surrogate 범위 · 0008 엔진 설계점

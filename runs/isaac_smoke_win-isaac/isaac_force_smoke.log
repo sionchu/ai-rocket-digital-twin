@@ -1,0 +1,12 @@
+[WARNING] _isaac_sim is present but _isaac_sim\setup_conda_env.bat is missing; Isaac Sim env vars not exported. 
+[WARNING] Re-extract the Isaac Sim Windows zip if you intend to use the bundled binary. 
+The '--headless' CLI argument is deprecated. Omit '--viz' for default headless. If config visualizers are enabled and you want to force headless, use '--viz none'.
+[ISAACLAB] AppLauncher initialization complete
+[INFO]: Registered backend 'physx' for factory RigidObject.
+SMOKE_RESULT {"status": "PASS", "cases": [{"case": "axial_upright", "lin": 2.9044489203903145e-07, "ang": null, "ang_abs": 0.0}, {"case": "gimbal2deg_upright", "lin": 9.531679530354491e-05, "ang": 2.0249624020651189e-07, "ang_abs": 6.930591978093759e-08}, {"case": "gimbal_rcs_tilted15", "lin": 6.607753152140794e-05, "ang": 2.0304359096914392e-05, "ang_abs": 9.425566107436845e-06}, {"case": "gimbal_rcs_tilted10_spinning", "lin": 0.0025874794701820575, "ang": 0.002368585040647728, "ang_abs": 0.0012584322560844866}]}
+Loading user config located at: 'c:/dev/isaaclab/_isaac_sim/kit/data/Kit/IsaacLab/3.0/user.config.json'
+2026-10-17T06:07:15Z [0ms] [Warning] [omni.ext.plugin] [ext: isaaclab_visualizers] Extensions config 'extension.toml' doesn't exist 'c:/dev/isaaclab/source/isaaclab_visualizers' or 'c:/dev/isaaclab/source/isaaclab_visualizers/config'
+2026-10-17T06:07:16Z [1,308ms] [Warning] [omni.usd_config.extension] Enable omni.materialx.libs extension to use MaterialX
+2026-10-17T06:07:22Z [6,847ms] [Warning] [isaaclab_physx.physics.physx_manager] TGS solver with enable_external_forces_every_iteration=False may cause noisy velocities.
+2026-10-17T06:07:23Z [7,882ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+[INFO] Using Python: "C:\dev\IsaacLab\_isaac_sim\kit\python\python.exe"

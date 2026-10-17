@@ -1,0 +1,177 @@
+{
+ "reference": "cloud-v1912 runs/cfd/cfd_summary.json",
+ "label": "wsl-v2606",
+ "cases": [
+  {
+   "engine": "bell_B",
+   "level": 1,
+   "openfoam_version": "v2606",
+   "mesh_ok": true,
+   "qa": "PASS",
+   "wall_time_s": 440.1,
+   "cloud_wall_time_s": 390.1,
+   "stream_thrust_n": 21458.766447221456,
+   "stream_thrust_n_rel_diff_vs_cloud": -2.548225209731588e-05,
+   "mdot_out": 8.464867482201495,
+   "mdot_out_rel_diff_vs_cloud": -2.4474540141597322e-05,
+   "exit_p_avg_pa": 137348.93061374378,
+   "exit_p_avg_pa_rel_diff_vs_cloud": -2.8601451127241425e-05,
+   "stream_thrust_n_rel_std": 0.00027819382672644515,
+   "mass_imbalance": -0.00019210605237833194
+  },
+  {
+   "engine": "bell_B",
+   "level": 2,
+   "openfoam_version": "v2606",
+   "mesh_ok": true,
+   "qa": "PASS",
+   "wall_time_s": 1457.6,
+   "cloud_wall_time_s": 1451.3,
+   "stream_thrust_n": 21482.763737414003,
+   "stream_thrust_n_rel_diff_vs_cloud": -2.0377194261845113e-05,
+   "mdot_out": 8.467566323169947,
+   "mdot_out_rel_diff_vs_cloud": -4.47777041049776e-05,
+   "exit_p_avg_pa": 137041.2087987476,
+   "exit_p_avg_pa_rel_diff_vs_cloud": -8.247241068630253e-05,
+   "stream_thrust_n_rel_std": 0.0004958148157979186,
+   "mass_imbalance": -0.000174017065577541
+  },
+  {
+   "engine": "bell_B",
+   "level": 3,
+   "openfoam_version": "v2606",
+   "mesh_ok": true,
+   "qa": "PASS",
+   "wall_time_s": 4127.8,
+   "cloud_wall_time_s": 5615.2,
+   "stream_thrust_n": 21496.8782428036,
+   "stream_thrust_n_rel_diff_vs_cloud": 3.347852212292434e-05,
+   "mdot_out": 8.469163430272173,
+   "mdot_out_rel_diff_vs_cloud": 5.994143933778603e-06,
+   "exit_p_avg_pa": 136858.1239252947,
+   "exit_p_avg_pa_rel_diff_vs_cloud": -2.5817727124987767e-05,
+   "stream_thrust_n_rel_std": 0.0002963504105640358,
+   "mass_imbalance": -0.00020223394288864695
+  },
+  {
+   "engine": "conical_A",
+   "level": 1,
+   "openfoam_version": "v2606",
+   "mesh_ok": true,
+   "qa": "PASS",
+   "wall_time_s": 436.9,
+   "cloud_wall_time_s": 377.2,
+   "stream_thrust_n": 21730.6864739441,
+   "stream_thrust_n_rel_diff_vs_cloud": -1.9454742381319036e-06,
+   "mdot_out": 8.463812738876868,
+   "mdot_out_rel_diff_vs_cloud": -6.334821415950975e-06,
+   "exit_p_avg_pa": 133345.05018913845,
+   "exit_p_avg_pa_rel_diff_vs_cloud": -1.4511318558226116e-05,
+   "stream_thrust_n_rel_std": 0.00019770550158967155,
+   "mass_imbalance": -9.752008956954015e-05
+  },
+  {
+   "engine": "conical_A",
+   "level": 2,
+   "openfoam_version": "v2606",
+   "mesh_ok": true,
+   "qa": "PASS",
+   "wall_time_s": 1413.5,
+   "cloud_wall_time_s": 1426.7,
+   "stream_thrust_n": 21747.050553285684,
+   "stream_thrust_n_rel_diff_vs_cloud": 3.762697586282051e-05,
+   "mdot_out": 8.467484152411792,
+   "mdot_out_rel_diff_vs_cloud": 2.897721812806387e-05,
+   "exit_p_avg_pa": 133231.54314283596,
+   "exit_p_avg_pa_rel_diff_vs_cloud": 1.9574908638205722e-05,
+   "stream_thrust_n_rel_std": 0.00028454069317654287,
+   "mass_imbalance": -0.00017076434602076213
+  },
+  {
+   "engine": "conical_A",
+   "level": 3,
+   "openfoam_version": "v2606",
+   "mesh_ok": true,
+   "qa": "PASS",
+   "wall_time_s": 4097.4,
+   "cloud_wall_time_s": 5529.2,
+   "stream_thrust_n": 21756.274055824324,
+   "stream_thrust_n_rel_diff_vs_cloud": -2.8703413440406073e-05,
+   "mdot_out": 8.469591164903356,
+   "mdot_out_rel_diff_vs_cloud": -4.705341396363412e-05,
+   "exit_p_avg_pa": 133172.2725299205,
+   "exit_p_avg_pa_rel_diff_vs_cloud": -6.941213097296407e-05,
+   "stream_thrust_n_rel_std": 0.0003547661301784869,
+   "mass_imbalance": -0.00025690679331660674
+  }
+ ],
+ "gci": {
+  "conical_A": {
+   "stream_thrust": {
+    "gci_fine": 0.0006845165309500063,
+    "p": 1.4140151318063574,
+    "asymptotic_ratio": 1.0004241265966638,
+    "f_extrap": 21768.18807921879,
+    "monotone": true,
+    "cloud_gci_fine": 0.0013512382215436732,
+    "cloud_p": 0.9223616718046802,
+    "f_extrap_rel_diff_vs_cloud": -0.000561489519404852
+   },
+   "mdot": {
+    "gci_fine": 0.00041882605368041034,
+    "p": 1.3695523308437314,
+    "asymptotic_ratio": 1.000248835717155,
+    "f_extrap": 8.472428993258463,
+    "monotone": true,
+    "cloud_gci_fine": 0.0017968824565822163,
+    "cloud_p": 0.5023960173026051,
+    "f_extrap_rel_diff_vs_cloud": -0.0011478642403490124
+   },
+   "all_levels_qa_pass": true
+  },
+  "bell_B": {
+   "stream_thrust": {
+    "gci_fine": 0.001172159213091866,
+    "p": 1.308960709808371,
+    "asymptotic_ratio": 1.0006570153431895,
+    "f_extrap": 21517.036453911616,
+    "monotone": true,
+    "cloud_gci_fine": 0.0008930948249821283,
+    "cloud_p": 1.5087450268888762,
+    "f_extrap_rel_diff_vs_cloud": 0.0002565781074734205
+   },
+   "mdot": {
+    "gci_fine": 0.0003417125127132131,
+    "p": 1.2938930324483948,
+    "asymptotic_ratio": 1.000188614655176,
+    "f_extrap": 8.471478645565243,
+    "monotone": true,
+    "cloud_gci_fine": 0.00011801913033823219,
+    "cloud_p": 2.2197333104439787,
+    "f_extrap_rel_diff_vs_cloud": 0.00018493302794471428
+   },
+   "all_levels_qa_pass": true
+  }
+ },
+ "maps": {
+  "conical_A": {
+   "path": "runs/cfd_wsl-v2606/maps/conical_A_cfd.json",
+   "map_hash": "197f75f8a2d29c82"
+  },
+  "bell_B": {
+   "path": "runs/cfd_wsl-v2606/maps/bell_B_cfd.json",
+   "map_hash": "861c24d92a84263f"
+  }
+ },
+ "cloud_maps": {
+  "conical_A": {
+   "path": "runs/cfd/maps/conical_A_cfd.json",
+   "map_hash": "1833e5959ed69332"
+  },
+  "bell_B": {
+   "path": "runs/cfd/maps/bell_B_cfd.json",
+   "map_hash": "58783db6d5b99ca3"
+  }
+ },
+ "total_wall_s": 11973.3195707798
+}

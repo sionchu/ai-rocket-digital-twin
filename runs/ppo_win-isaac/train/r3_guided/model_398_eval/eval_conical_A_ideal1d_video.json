@@ -1,0 +1,99 @@
+{
+ "label": "win-isaac",
+ "checkpoint": "runs\\ppo_win-isaac\\train\\r3_guided\\model_398.pt",
+ "engine": "conical_A",
+ "map_source": "ideal1d",
+ "map_hash": "b337fd547e15ef5c",
+ "seeds": [
+  1000,
+  1002
+ ],
+ "limits": {
+  "vz_max_m_s": 2.0,
+  "vh_max_m_s": 1.0,
+  "tilt_max_rad": 0.17453292519943295,
+  "pos_err_max_m": 2.0,
+  "final_tilt_max_rad": 0.2617993877991494
+ },
+ "settle_s": 3.0,
+ "control_steps": 2211,
+ "summary": {
+  "n": 3,
+  "n_success": 3,
+  "success_rate": 1.0,
+  "wilson95": [
+   0.43849391955098227,
+   1.0
+  ],
+  "n_physics_valid": 3,
+  "n_success_and_physics_valid": 3,
+  "td_vz_abs_p95": 1.8924414277076722,
+  "td_vh_p95": 0.663364839553833,
+  "td_pos_err_median": 0.7187063097953796,
+  "td_pos_err_p95": 0.928951209783554,
+  "td_pos_err_max": 0.9523117542266846,
+  "td_tilt_deg_max": 2.799812078475952,
+  "fuel_mean_kg": 65.4120724995931,
+  "fuel_p95_kg": 70.76854934692383,
+  "termination_reasons": {
+   "landed": 3
+  }
+ },
+ "episodes": [
+  {
+   "env": 0,
+   "scenario_index": 0,
+   "success": true,
+   "termination_reason": "landed",
+   "touchdown": true,
+   "td_vz": -1.7036861181259155,
+   "td_vh": 0.5223102569580078,
+   "td_tilt_deg": 2.014214277267456,
+   "td_pos_err": 0.7187063097953796,
+   "final_tilt_deg": 0.01978234015405178,
+   "max_tilt_deg": 6.992070198059082,
+   "fuel_used_kg": 62.733238220214844,
+   "map_invalid_steps": 0,
+   "physics_valid": true,
+   "duration_s": 14.260278701782227,
+   "seed": 1000
+  },
+  {
+   "env": 0,
+   "scenario_index": 1,
+   "success": true,
+   "termination_reason": "landed",
+   "touchdown": true,
+   "td_vz": -1.6464322805404663,
+   "td_vh": 0.4911799132823944,
+   "td_tilt_deg": 2.799812078475952,
+   "td_pos_err": 0.22967113554477692,
+   "final_tilt_deg": 0.4320538640022278,
+   "max_tilt_deg": 4.545449733734131,
+   "fuel_used_kg": 61.841617584228516,
+   "map_invalid_steps": 0,
+   "physics_valid": true,
+   "duration_s": 13.940271377563477,
+   "seed": 1001
+  },
+  {
+   "env": 0,
+   "scenario_index": 2,
+   "success": true,
+   "termination_reason": "landed",
+   "touchdown": true,
+   "td_vz": -1.9134142398834229,
+   "td_vh": 0.6790375709533691,
+   "td_tilt_deg": 2.736952543258667,
+   "td_pos_err": 0.9523117542266846,
+   "final_tilt_deg": 0.8842595219612122,
+   "max_tilt_deg": 7.123564720153809,
+   "fuel_used_kg": 71.66136169433594,
+   "map_invalid_steps": 0,
+   "physics_valid": true,
+   "duration_s": 16.020315170288086,
+   "seed": 1002
+  }
+ ],
+ "video": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\videos\\late_r3_model398.mp4"
+}

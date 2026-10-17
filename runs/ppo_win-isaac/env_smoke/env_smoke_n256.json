@@ -1,0 +1,63 @@
+{
+ "label": "win-isaac",
+ "num_envs": 256,
+ "control_steps": 600,
+ "wall_s": 115.50464105606079,
+ "env_steps_per_s": 1329.8166947720258,
+ "nan_or_inf_count": 0,
+ "episodes_finished": 255,
+ "terminations": {
+  "tip": 21,
+  "oob": 161,
+  "timeout": 0,
+  "touchdown": 73,
+  "success": 0
+ },
+ "reward_sum": -28381.267692565918,
+ "vram_used_mib_before_app": 9412,
+ "vram_used_mib_after_rollout": 11514,
+ "vram_delta_mib": 2102,
+ "torch_max_allocated_mib": 8.3330078125,
+ "asset": {
+  "mass_kg": 1207.1859948358392,
+  "com_body_m": [
+   0.0,
+   0.0,
+   -0.2276140989647705
+  ],
+  "inertia_diag": [
+   4016.01741909126,
+   4016.01741909126,
+   320.0625
+  ],
+  "foot_radius_m": 0.15,
+  "propellant_kg": 450.0,
+  "rcs_gas_kg": 10.0
+ },
+ "td_com_z": 3.6723859310150146,
+ "map_hash": "b337fd547e15ef5c",
+ "set_masses_probe": {
+  "mass_before": [
+   1207.18603515625,
+   1207.18603515625
+  ],
+  "mass_after": [
+   1127.18603515625,
+   1207.18603515625
+  ],
+  "inertia_unchanged": true,
+  "az_measured": [
+   6.76080510020256,
+   6.76080510020256
+  ],
+  "az_expected": [
+   7.936650654576313,
+   6.760805293183489
+  ],
+  "rel_err": [
+   0.148153875677488,
+   2.8544074358896748e-08
+  ],
+  "mass_only_update_works": false
+ }
+}

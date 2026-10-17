@@ -1,0 +1,100 @@
+{
+ "label": "win-isaac",
+ "checkpoint": "runs\\ppo_win-isaac\\train\\r0_base\\model_50.pt",
+ "engine": "conical_A",
+ "map_source": "ideal1d",
+ "map_hash": "b337fd547e15ef5c",
+ "seeds": [
+  1000,
+  1002
+ ],
+ "limits": {
+  "vz_max_m_s": 2.0,
+  "vh_max_m_s": 1.0,
+  "tilt_max_rad": 0.17453292519943295,
+  "pos_err_max_m": 2.0,
+  "final_tilt_max_rad": 0.2617993877991494
+ },
+ "settle_s": 3.0,
+ "control_steps": 1619,
+ "summary": {
+  "n": 3,
+  "n_success": 0,
+  "success_rate": 0.0,
+  "wilson95": [
+   0.0,
+   0.5615060804490177
+  ],
+  "n_physics_valid": 3,
+  "n_success_and_physics_valid": 0,
+  "td_vz_abs_p95": 5.718341970443726,
+  "td_vh_p95": 2.1617290139198304,
+  "td_pos_err_median": 9.877487182617188,
+  "td_pos_err_p95": 17.633888053894044,
+  "td_pos_err_max": 18.495710372924805,
+  "td_tilt_deg_max": 8.053812026977539,
+  "fuel_mean_kg": 45.06147384643555,
+  "fuel_p95_kg": 51.4336139678955,
+  "termination_reasons": {
+   "landing_limits": 2,
+   "tip_over_or_loss_of_control": 1
+  }
+ },
+ "episodes": [
+  {
+   "env": 0,
+   "scenario_index": 0,
+   "success": false,
+   "termination_reason": "landing_limits",
+   "touchdown": true,
+   "td_vz": -5.581215858459473,
+   "td_vh": 2.213139295578003,
+   "td_tilt_deg": 3.471979856491089,
+   "td_pos_err": 9.877487182617188,
+   "final_tilt_deg": 0.30325788259506226,
+   "max_tilt_deg": 4.096677303314209,
+   "fuel_used_kg": 40.15525817871094,
+   "map_invalid_steps": 0,
+   "physics_valid": true,
+   "duration_s": 10.420190811157227,
+   "seed": 1000
+  },
+  {
+   "env": 0,
+   "scenario_index": 1,
+   "success": false,
+   "termination_reason": "tip_over_or_loss_of_control",
+   "touchdown": true,
+   "td_vz": -0.11307065933942795,
+   "td_vh": 1.6990364789962769,
+   "td_tilt_deg": 8.053812026977539,
+   "td_pos_err": 18.495710372924805,
+   "final_tilt_deg": 61.3177375793457,
+   "max_tilt_deg": 61.3177375793457,
+   "fuel_used_kg": 42.61579132080078,
+   "map_invalid_steps": 0,
+   "physics_valid": true,
+   "duration_s": 9.140161514282227,
+   "seed": 1001
+  },
+  {
+   "env": 0,
+   "scenario_index": 2,
+   "success": false,
+   "termination_reason": "landing_limits",
+   "touchdown": true,
+   "td_vz": -5.733578205108643,
+   "td_vh": 0.6013376116752625,
+   "td_tilt_deg": 2.2345831394195557,
+   "td_pos_err": 9.226563453674316,
+   "final_tilt_deg": 0.9534706473350525,
+   "max_tilt_deg": 4.48698616027832,
+   "fuel_used_kg": 52.41337203979492,
+   "map_invalid_steps": 0,
+   "physics_valid": true,
+   "duration_s": 12.820245742797852,
+   "seed": 1002
+  }
+ ],
+ "video": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\videos\\early_r0_model50.mp4"
+}

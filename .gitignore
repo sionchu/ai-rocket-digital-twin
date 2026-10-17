@@ -8,5 +8,8 @@ runs/cfd/*_L*/
 runs/cfd_wsl-v2606/*_L*/
 runs/cfd_wsl-v2606.batch.log
 runs/ppo_win-isaac/assets/
-runs/ppo_win-isaac/*.log
+runs/ppo_win-isaac/train/*/*_eval.log
 runs/ppo_win-isaac/train/*/git/
+runs/ppo_win-isaac/evalsweep.log
+runs/ppo_win-isaac/eval_*.log
+runs/ppo_win-isaac/video_*.log

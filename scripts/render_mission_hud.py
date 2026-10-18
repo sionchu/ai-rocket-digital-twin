@@ -47,6 +47,9 @@ class Run:
         d = MISSION / name
         self.tel = json.loads((d / "telemetry.json").read_text())
         self.reader = imageio.get_reader(d / "raw.mp4")
+        self.reader2 = imageio.get_reader(d / "raw_engine.mp4") if (d / "raw_engine.mp4").exists() else None
+        self.plume = self.tel.get("plume", "cone")
+        self.failed = [t in self.tel.get("rcs_failed", []) for t in ("rcs_01", "rcs_02", "rcs_03", "rcs_04")]
         self.steps = self.tel["steps"]
         self.engine = self.tel["engine"]
         eng = load_engine(REPO / f"configs/engines/{self.engine}.yaml")
@@ -70,6 +73,16 @@ class Run:
     def frame(self, i):
         return self.reader.get_data(i)
 
+    def frame_engine(self, s):
+        if self.reader2 is None or s.get("frame_engine") is None:
+            return None
+        return self.reader2.get_data(s["frame_engine"])
+
+    def flame_note(self):
+        how = {"flow": "NVIDIA Flow fire", "cone": "emissive cones", "both": "NVIDIA Flow + cones"}[self.plume]
+        return (f"flame: {how}, length from thrust, spread from Pe/Pa (1D nozzle). Visual representation of the "
+                "1D nozzle output, NOT a combustion simulation")
+
     def pe_pa(self, s):
         key = (round(s["throttle"], 3), round(s["pa"], -1))
         if key not in self.pe_cache:
@@ -91,7 +104,7 @@ def panel(fig, rect):
     return ax
 
 
-def engine_ring(ax, s, title=True):
+def engine_ring(ax, s, title=True, failed=(False, False, False, False)):
     ax.set_xlim(-1.3, 1.3), ax.set_ylim(-1.3, 1.3), ax.set_aspect("equal")
     on = s["engine_on"]
     thr = s["throttle"] if on else 0.0
@@ -104,8 +117,10 @@ def engine_ring(ax, s, title=True):
     for k, ang in enumerate([0, 180, 180, 0]):  # rcs_01/02 at +x (y-dir +/-), rcs_03/04 at -x
         x = 1.0 * math.cos(math.radians(ang))
         y = 0.22 * (1 if k in (0, 3) else -1)
-        lit = s["rcs_frac"][k] > 0
-        ax.add_patch(Circle((x, y), 0.12, color=WARN if lit else "#2b3440", ec=FG, lw=0.8))
+        lit = s["rcs_frac"][k] > 0 and not failed[k]
+        ax.add_patch(Circle((x, y), 0.12, color=BAD if failed[k] else (WARN if lit else "#2b3440"), ec=FG, lw=0.8))
+        if failed[k]:
+            ax.text(x, y - 0.25, "FAIL", color=BAD, ha="center", fontsize=7, family="monospace")
     if title:
         ax.text(0, 1.18, "ENGINE", color=DIM, ha="center", fontsize=9, family="monospace")
     ax.text(0, -0.9, f"{thr * 100:5.1f} %  {s['f_main_n'] / 1000:5.2f} kN" if on else "CUTOFF", color=FG if on else BAD,
@@ -121,7 +136,8 @@ def telemetry(ax, run, s, compact=False):
     rows = [("T+", f"{s['t']:6.2f} s"), ("ALT (gear)", f"{h:6.2f} m"), ("V-SPEED", f"{v[2]:+6.2f} m/s"),
             ("H-SPEED", f"{np.linalg.norm(v[:2]):6.2f} m/s"), ("PAD ERR", f"{np.linalg.norm(p[:2]):6.2f} m"),
             ("TILT", f"{s['tilt_deg']:6.2f} °"), ("PROPELLANT", f"{s['m_prop']:6.1f} kg"),
-            ("WIND", f"{np.linalg.norm(s['wind_w'][:2]):6.0f} N")]
+            ("WIND", f"{np.linalg.norm(s['wind_w'][:2]):6.0f} N"),
+            ("PLUME L/SPREAD", f"{s.get('plume_len_m', 0):4.1f} m ×{s.get('plume_spread', 1):.2f}")]
     n = len(rows)
     for i, (k, val) in enumerate(rows):
         y = 0.92 - i * (0.86 / n)
@@ -249,9 +265,26 @@ def verdict(ax, run, s):
 def header(ax, run, extra=""):
     ax.text(0.01, 0.5, f"{run.label}  |  engine {run.engine}  |  seed {run.tel['seed']}  {extra}", color=FG, fontsize=12,
             weight="bold", family="monospace", va="center", transform=ax.transAxes)
-    ax.text(0.99, 0.5, "win-isaac · Isaac Lab 3.0 / Isaac Sim 6.0.1 PhysX · visuals: plume ∝ thrust, arrows: "
-            "thrust 0.5 m/kN, net 2 m/kN, wind 10 m/kN", color=DIM, fontsize=8, family="monospace", ha="right",
-            va="center", transform=ax.transAxes)
+    ax.text(0.99, 0.5, "win-isaac · Isaac Lab 3.0 / Isaac Sim 6.0.1 PhysX · arrows: thrust 0.5 m/kN, net 2 m/kN, "
+            "wind 10 m/kN", color=DIM, fontsize=8, family="monospace", ha="right", va="center", transform=ax.transAxes)
+
+
+def pip(fig, run, s, rect, label="ENGINE CAM"):
+    im = run.frame_engine(s)
+    if im is None:
+        return
+    a = fig.add_axes(rect)
+    a.imshow(im), a.set_xticks([]), a.set_yticks([])
+    for sp in a.spines.values():
+        sp.set_color(FG)
+    a.text(0.02, 0.92, label, color=FG, fontsize=8, family="monospace", transform=a.transAxes,
+           bbox=dict(facecolor="#000000aa", edgecolor="none"))
+
+
+def flame_footer(fig, run, y=0.0, h=0.02):
+    a = fig.add_axes([0, y, 1, h])
+    a.axis("off")
+    a.text(0.5, 0.5, run.flame_note(), color=WARN, fontsize=8, ha="center", va="center", family="monospace")
 
 
 def first_td(run):
@@ -274,7 +307,9 @@ def render_single(name, out, fps=25):
         vid = fig.add_axes([0.0, 0.29, 0.6667, 0.665])
         vid.imshow(run.frame(fs["frame"])), vid.axis("off")
         verdict(vid, run, fs)
-        engine_ring(panel(fig, [0.675, 0.66, 0.15, 0.29]), fs)
+        pip(fig, run, fs, [0.45, 0.30, 0.21, 0.21])
+        flame_footer(fig, run)
+        engine_ring(panel(fig, [0.675, 0.66, 0.15, 0.29]), fs, failed=run.failed)
         telemetry(panel(fig, [0.83, 0.66, 0.165, 0.29]), run, fs)
         mach_panel(panel(fig, [0.675, 0.43, 0.32, 0.22]), run)
         pe_gauge(panel(fig, [0.675, 0.30, 0.32, 0.12]), run, fs)
@@ -308,15 +343,17 @@ def render_pair(name_a, name_b, out, fps=25):
             vid = fig.add_axes([x0, 0.43, 0.5, 0.525])
             vid.imshow(run.frame(fs["frame"])), vid.axis("off")
             verdict(vid, run, fs)
-            engine_ring(panel(fig, [x0 + 0.005, 0.2, 0.12, 0.225]), fs)
+            pip(fig, run, fs, [x0 + 0.34, 0.44, 0.155, 0.155])
+            engine_ring(panel(fig, [x0 + 0.005, 0.2, 0.12, 0.225]), fs, failed=run.failed)
             telemetry(panel(fig, [x0 + 0.13, 0.2, 0.14, 0.225]), run, fs, compact=True)
             limits_panel(panel(fig, [x0 + 0.275, 0.2, 0.22, 0.225]), run, fs, td if fs["touchdown"] else None)
             strip(fig.add_axes([x0 + 0.04, 0.04, 0.44, 0.13], facecolor=BG), run, k + 1)
-        ft = fig.add_axes([0, 0, 1, 0.02])
+        ft = fig.add_axes([0, 0.016, 1, 0.016])
         ft.axis("off")
-        ft.text(0.5, 0.5, "win-isaac · same Isaac env, same seed, same actuators/map/PhysX · plume ∝ actual thrust · "
+        ft.text(0.5, 0.5, "win-isaac · same Isaac env, same seed, same actuators/map/PhysX · "
                 "arrows: thrust 0.5 m/kN (yellow), net 2 m/kN (magenta), wind 10 m/kN (cyan)", color=DIM, fontsize=8,
                 ha="center", va="center", family="monospace")
+        flame_footer(fig, runs[0], y=0.0, h=0.016)
         fig.canvas.draw()
         img = np.asarray(fig.canvas.buffer_rgba())[..., :3]
         w.append_data(img)

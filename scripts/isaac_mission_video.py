@@ -31,6 +31,13 @@ parser.add_argument("--cam_az_deg", type=float, default=-60.0)
 parser.add_argument("--frame_every", type=int, default=2, help="control steps per video frame (2 -> 25 fps real time)")
 parser.add_argument("--width", type=int, default=1280)
 parser.add_argument("--height", type=int, default=720)
+parser.add_argument("--plume", choices=["cone", "flow", "both"], default="cone",
+                    help="cone = emissive marker cones; flow = NVIDIA Flow fire (visual only)")
+parser.add_argument("--flow_set", nargs="*", default=[], help="prim_rel:attr=value overrides for the Flow plume")
+parser.add_argument("--flow_speed", nargs=2, type=float, default=[10.0, 15.0], help="box-local exhaust speed = a + b * thrust_frac")
+parser.add_argument("--max_steps", type=int, default=3000)
+parser.add_argument("--rcs_failed", nargs="*", default=[], help="RCS ids failed from t=0 (known to the PD allocator)")
+parser.add_argument("--engine_cam", action="store_true", help="second camera close to the nozzle (picture-in-picture)")
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 app = AppLauncher(args).app
@@ -83,11 +90,20 @@ def markers_cfg():
         "shaft_wind": sim_utils.CylinderCfg(radius=0.06, height=1.0, visual_material=mat((0.2, 0.8, 1.0), (0.2, 1.0, 1.4))),
         "head_wind": sim_utils.ConeCfg(radius=0.16, height=0.4, visual_material=mat((0.2, 0.8, 1.0), (0.2, 1.0, 1.4))),
         "pad": sim_utils.CylinderCfg(radius=2.0, height=0.02, visual_material=mat((0.9, 0.9, 0.2), (0.3, 0.3, 0.0), 0.6)),
+        "rcs_failed": sim_utils.SphereCfg(radius=0.14, visual_material=mat((1.0, 0.05, 0.05), (3.0, 0.0, 0.0))),
     })
 
 
 MARKER_IDS = {k: i for i, k in enumerate(["plume_core", "plume_outer", "rcs", "shaft_thrust", "head_thrust", "shaft_net",
-                                          "head_net", "shaft_wind", "head_wind", "pad"])}
+                                          "head_net", "shaft_wind", "head_wind", "pad", "rcs_failed"])}
+
+
+def plume_shape(thr_frac: float, pe_pa: float) -> tuple[float, float]:
+    """Visual mapping only (no combustion model): length from thrust fraction, spread from the 1D exit-to-ambient
+    pressure ratio (under-expanded Pe/Pa > 1 widens, over-expanded < 1 narrows the jet)."""
+    length = 0.6 + 6.0 * thr_frac
+    spread = float(np.clip(math.sqrt(max(pe_pa, 1e-3)), 0.6, 1.8))
+    return length, spread
 
 
 def main():
@@ -103,6 +119,9 @@ def main():
     cfg.scene.env_spacing = 0.0
     cfg.viewer.origin_type = "world"
     cfg.video_recorder.window_width, cfg.video_recorder.window_height = args.width, args.height
+    if args.plume != "cone":
+        from rocket_dt.isaac_env.flow_plume import enable_flow
+        enable_flow()
     env = VtvlEnv(cfg, render_mode="rgb_array")
     wenv = RslRlVecEnvWrapper(env, clip_actions=None)
     if args.controller == "ppo":
@@ -113,7 +132,25 @@ def main():
         policy = runner.get_inference_policy(device=env.device)
     else:
         policy = PDPolicy(env, args.engine, "ideal1d")
+    rcs_ids = [t.id for t in load_vehicle(REPO / "configs/vehicle_v0.yaml").layout.rcs]
+    for rid in args.rcs_failed:
+        env.act.failed[rcs_ids.index(rid)] = True
+        if args.controller == "pd":
+            policy.failed[rcs_ids.index(rid)] = True  # fault known to the allocator (simulate.py default)
+    failed = env.act.failed.cpu().numpy().astype(bool)
+    eng_design = load_engine(REPO / f"configs/engines/{args.engine}.yaml")
+    from rocket_dt.propulsion import nozzle1d
     vis = VisualizationMarkers(markers_cfg())
+    flow = None
+    if args.plume != "cone":
+        from rocket_dt.isaac_env.flow_plume import FlowPlume
+        ov = {}
+        for kv in args.flow_set:
+            rel, val = kv.split("=")
+            prim_rel, attr = rel.rsplit(":", 1)
+            ov.setdefault(prim_rel, {})[attr] = float(val)
+        flow = FlowPlume(sim_utils.get_current_stage(), REPO / "runs/ppo_win-isaac/mission" / args.name,
+                         fps=50 / args.frame_every, overrides=ov, speed0=args.flow_speed[0], speed_gain=args.flow_speed[1])
     from isaacsim.core.rendering_manager import ViewportManager
 
     veh = load_vehicle(REPO / "configs/vehicle_v0.yaml").with_engine(args.engine)
@@ -129,14 +166,29 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     import imageio.v2 as imageio
     writer = imageio.get_writer(out / "raw.mp4", fps=50 // args.frame_every, codec="libx264", quality=7, macro_block_size=8)
-    tel = {"label": "win-isaac", "controller": args.controller, "checkpoint": args.checkpoint, "engine": args.engine,
+    cam2 = None
+    if args.engine_cam:
+        import omni.replicator.core as rep
+        from pxr import UsdGeom
+        UsdGeom.Camera.Define(sim_utils.get_current_stage(), "/World/EngineCam").CreateFocalLengthAttr(18.0)
+        rp2 = rep.create.render_product("/World/EngineCam", (640, 360))
+        cam2 = rep.AnnotatorRegistry.get_annotator("rgb", device="cpu")
+        cam2.attach([rp2])
+        writer2 = imageio.get_writer(out / "raw_engine.mp4", fps=50 // args.frame_every, codec="libx264", quality=7,
+                                     macro_block_size=8)
+        n2 = 0
+    tel = {"label": "win-isaac", "plume": args.plume, "flow_tuning": flow.tuning if flow else None, "controller": args.controller, "checkpoint": args.checkpoint, "engine": args.engine,
            "seed": args.seed, "scenario": cfg.eval_scenarios[0], "map_hash": env.map_hash, "control_dt": env.step_dt,
            "frame_every": args.frame_every, "arrow_scale_m_per_n": ARROW_SCALE, "thrust_ref_n_sl_full": f_ref,
-           "mass_kg_fixed": env.mass, "td_com_z": env.td_com_z, "steps": []}
+           "mass_kg_fixed": env.mass, "td_com_z": env.td_com_z, "rcs_failed": [r for r, f in zip(rcs_ids, failed) if f],
+           "plume_mapping": "length = 0.6 + 6.0 * F/F_ref [m]; spread = clip(sqrt(Pe/Pa), 0.6, 1.8); Pe from "
+                            "rocket_dt nozzle1d at logged throttle and ISA Pa. Visual representation of the 1D "
+                            "nozzle output, not a combustion simulation.",
+           "steps": []}
     rng = np.random.default_rng(0)
     obs = wenv.get_observations()
     k, n_frames = 0, 0
-    while k < 3000:
+    while k < args.max_steps:
         with torch.inference_mode():
             act = policy(obs)
         obs, _, _, _ = wenv.step(act)
@@ -168,16 +220,24 @@ def main():
         exit_w = com_w + rot @ (exit_b - com_b)
         d_w = rot @ d_b
         thr_frac = max(f_main, 0.0) / f_ref
-        L = (0.6 + 6.0 * thr_frac) * (1.0 + 0.04 * rng.standard_normal()) if f_main > 1.0 else 1e-3
+        pt = nozzle1d.evaluate(eng_design, max(step["throttle"], eng_design.throttle_min), step["pa"])
+        pe_pa = pt.exit_pressure_pa / step["pa"]
+        step["pe_pa"] = float(pe_pa)
+        L0, spread = plume_shape(thr_frac, pe_pa)
+        step["plume_len_m"], step["plume_spread"] = (L0 if f_main > 1.0 else 0.0), spread
+        L = L0 * (1.0 + 0.04 * rng.standard_normal()) if f_main > 1.0 else 1e-3
         trans, quats, scales, ids = [], [], [], []
-        for name, lf, wf in (("plume_core", 0.65, 0.7 + 0.5 * thr_frac), ("plume_outer", 1.0, 0.8 + 0.6 * thr_frac)):
-            h = L * lf
+        if flow is not None:
+            flow.update(exit_w, d_w, L0 if f_main > 1.0 else 0.0, spread, thr_frac, step["engine_on"])
+        for name, lf, wf in (("plume_core", 0.65, (0.7 + 0.5 * thr_frac) * spread),
+                             ("plume_outer", 1.0, (0.8 + 0.6 * thr_frac) * spread)):
+            h = L * lf if args.plume != "flow" else 1e-3
             trans.append(exit_w - d_w * h / 2)
             quats.append(quat_z_to(d_w))
             scales.append([wf, wf, h])
             ids.append(MARKER_IDS[name])
         for i in range(4):
-            h = 0.9 if frac[i] > 0 else 1e-3
+            h = 0.9 if (frac[i] > 0 and not failed[i]) else 1e-3  # only thrusters that are actually firing
             fd = rot @ rcs_dir[i]
             pos = com_w + rot @ (rcs_pos[i] - com_b)
             trans.append(pos - fd * h / 2)
@@ -197,6 +257,11 @@ def main():
             quats.append(quat_z_to(u))
             scales.append([1.0, 1.0, 1.0 if length > 0.01 else 1e-3])
             ids.append(MARKER_IDS[f"head_{name}"])
+        for i in np.flatnonzero(failed):
+            trans.append(com_w + rot @ (rcs_pos[i] - com_b))
+            quats.append(np.array([0.0, 0.0, 0.0, 1.0]))
+            scales.append([1.0, 1.0, 1.0])
+            ids.append(MARKER_IDS["rcs_failed"])
         trans.append(np.array([0.0, 0.0, 0.011]))
         quats.append(np.array([0.0, 0.0, 0.0, 1.0]))
         scales.append([1.0, 1.0, 1.0])
@@ -210,13 +275,26 @@ def main():
             eye[2] = max(eye[2], 2.0)
             target = com_w + np.array([0.0, 0.0, -0.5])
             ViewportManager.set_camera_view("/OmniverseKit_Persp", eye=eye.tolist(), target=target.tolist())
+            if cam2 is not None:  # side view of the nozzle, 7 m out, slightly above the exit plane
+                side = np.array([math.cos(az + 1.2), math.sin(az + 1.2), 0.0])
+                e2 = exit_w + side * 8.0 + np.array([0.0, 0.0, 0.3])
+                e2[2] = max(e2[2], 0.6)
+                ViewportManager.set_camera_view("/World/EngineCam", eye=e2.tolist(), target=(exit_w - d_w * 1.5).tolist())
             fr = env.render()
             if fr is not None and np.asarray(fr).size:
                 writer.append_data(np.asarray(fr)[..., :3])
                 step["frame"] = n_frames
                 n_frames += 1
+                if cam2 is not None:
+                    im2 = np.asarray(cam2.get_data())
+                    if im2.size:
+                        writer2.append_data(im2.reshape(360, 640, -1)[..., :3])
+                        step["frame_engine"] = n2
+                        n2 += 1
         tel["steps"].append(step)
     writer.close()
+    if cam2 is not None:
+        writer2.close()
     tel["episode"] = env.episode_results[0] if env.episode_results else None
     tel["n_frames"] = n_frames
     (out / "telemetry.json").write_text(json.dumps(tel))

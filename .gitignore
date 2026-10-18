@@ -20,3 +20,11 @@ runs/ppo_win-isaac/train/*/*_eval_*.log
 runs/ppo_win-isaac/pd_isaac/*.log
 runs/ppo_win-isaac/mission_*.log
 runs/ppo_win-isaac/hud_pair.log
+runs/ppo_win-isaac/mission/*/raw_engine.mp4
+runs/ppo_win-isaac/mission/*/fire_metric.usda
+runs/ppo_win-isaac/mission/flow_bright*/
+runs/ppo_win-isaac/mission/pd_A_1004_flow*/
+runs/ppo_win-isaac/mission/ft_*/
+runs/ppo_win-isaac/flow_probe/
+runs/ppo_win-isaac/flow_probe*.log
+runs/ppo_win-isaac/hud_f*.log

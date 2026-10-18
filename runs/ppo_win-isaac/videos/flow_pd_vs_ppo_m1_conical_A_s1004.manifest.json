@@ -1,0 +1,148 @@
+{
+ "label": "win-isaac",
+ "video": "flow_pd_vs_ppo_m1_conical_A_s1004.mp4",
+ "size_mb": 4.43,
+ "software": {
+  "isaaclab": "3.0.0",
+  "isaacsim": "6.0.1-rc.7+release.42383.32955d8d.gl",
+  "omni.flowusd": "110.0.3+110.0.0.wx64.r.cp312.u7f4",
+  "compositor_python": "3.12.10",
+  "matplotlib": "3.11.2",
+  "rocket_dt_commit": "fe5663c-dirty"
+ },
+ "runs": [
+  {
+   "name": "flow_pd_A_1004",
+   "controller": "pd",
+   "checkpoint": null,
+   "engine": "conical_A",
+   "seed": 1004,
+   "map_hash": "b337fd547e15ef5c",
+   "plume": "flow",
+   "flow_tuning": {
+    "flowSimulate/advection": {
+     "coolingRate": 2.5,
+     "burnPerTemp": 2.0,
+     "fuelPerBurn": 0.1,
+     "smokePerBurn": 0.3
+    },
+    "flowSimulate/advection/smoke": {
+     "fade": 6.0
+    },
+    "flowSimulate/advection/temperature": {
+     "fade": 4.0
+    },
+    "flowSimulate/advection/fuel": {
+     "fade": 4.0
+    },
+    "flowRender/rayMarch": {
+     "colorScale": 6.0
+    },
+    "flowOffscreen/colormap": {
+     "colorScale": 6.0
+    },
+    "box": {
+     "temperature": 2.0,
+     "fuel": 2.0,
+     "coupleRateTemperature": 10.0,
+     "coupleRateFuel": 10.0,
+     "coupleRateVelocity": 10.0
+    }
+   },
+   "plume_mapping": "length = 0.6 + 6.0 * F/F_ref [m]; spread = clip(sqrt(Pe/Pa), 0.6, 1.8); Pe from rocket_dt nozzle1d at logged throttle and ISA Pa. Visual representation of the 1D nozzle output, not a combustion simulation.",
+   "rcs_failed": [],
+   "episode": {
+    "env": 0,
+    "engine": "conical_A",
+    "scenario_index": 0,
+    "success": true,
+    "termination_reason": "landed",
+    "touchdown": true,
+    "td_vz": -1.2723299264907837,
+    "td_vh": 0.35894185304641724,
+    "td_tilt_deg": 2.206200122833252,
+    "td_pos_err": 0.2617741823196411,
+    "final_tilt_deg": 0.0,
+    "max_tilt_deg": 10.208199501037598,
+    "fuel_used_kg": 80.35096740722656,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "duration_s": 17.3400936126709
+   },
+   "n_frames": 433,
+   "flame_capture_check": {
+    "frames_checked": 179,
+    "frames_with_flame": 174,
+    "fraction": 0.9720670391061452,
+    "camera": "engine"
+   }
+  },
+  {
+   "name": "flow_ppo_m1_A_1004",
+   "controller": "ppo",
+   "checkpoint": "runs\\ppo_win-isaac\\train\\m1_mix_ft\\model_697.pt",
+   "engine": "conical_A",
+   "seed": 1004,
+   "map_hash": "b337fd547e15ef5c",
+   "plume": "flow",
+   "flow_tuning": {
+    "flowSimulate/advection": {
+     "coolingRate": 2.5,
+     "burnPerTemp": 2.0,
+     "fuelPerBurn": 0.1,
+     "smokePerBurn": 0.3
+    },
+    "flowSimulate/advection/smoke": {
+     "fade": 6.0
+    },
+    "flowSimulate/advection/temperature": {
+     "fade": 4.0
+    },
+    "flowSimulate/advection/fuel": {
+     "fade": 4.0
+    },
+    "flowRender/rayMarch": {
+     "colorScale": 6.0
+    },
+    "flowOffscreen/colormap": {
+     "colorScale": 6.0
+    },
+    "box": {
+     "temperature": 2.0,
+     "fuel": 2.0,
+     "coupleRateTemperature": 10.0,
+     "coupleRateFuel": 10.0,
+     "coupleRateVelocity": 10.0
+    }
+   },
+   "plume_mapping": "length = 0.6 + 6.0 * F/F_ref [m]; spread = clip(sqrt(Pe/Pa), 0.6, 1.8); Pe from rocket_dt nozzle1d at logged throttle and ISA Pa. Visual representation of the 1D nozzle output, not a combustion simulation.",
+   "rcs_failed": [],
+   "episode": {
+    "env": 0,
+    "engine": "conical_A",
+    "scenario_index": 0,
+    "success": true,
+    "termination_reason": "landed",
+    "touchdown": true,
+    "td_vz": -1.051525354385376,
+    "td_vh": 0.6489958763122559,
+    "td_tilt_deg": 2.190441370010376,
+    "td_pos_err": 1.0587382316589355,
+    "final_tilt_deg": 0.0,
+    "max_tilt_deg": 4.706235408782959,
+    "fuel_used_kg": 94.52190399169922,
+    "map_invalid_steps": 0,
+    "physics_valid": true,
+    "duration_s": 19.99964714050293
+   },
+   "n_frames": 499,
+   "flame_capture_check": {
+    "frames_checked": 142,
+    "frames_with_flame": 139,
+    "fraction": 0.9788732394366197,
+    "camera": "engine"
+   }
+  }
+ ],
+ "note": "Flame = visual representation of the 1D nozzle output (thrust -> length, Pe/Pa -> spread); it is not a combustion or plume CFD simulation and does not act on the vehicle."
+}

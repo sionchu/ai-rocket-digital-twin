@@ -33,3 +33,21 @@ Reading:
 Videos (`videos/`, HUD from `scripts/render_mission_hud.py`, raw renders from `scripts/isaac_mission_video.py`):
 - `pd_vs_ppo_m1_conical_A_s1004.mp4`
 - `ppo_m1_bell_C_s1004_separation.mp4`
+
+## NVIDIA Flow plume videos (branch `pc/flow-plume`)
+The flame is a **visual representation of the 1D nozzle output, not a combustion or plume CFD simulation**. It does not act on the vehicle.
+- **Renderer:** NVIDIA Flow (`omni.flowusd` 110.0.3) through Isaac Sim 6.0.1 RTX headless capture.
+- **Emitter:** a `FlowEmitterBox` aligned with the actual thrust axis, so it follows the gimbal.
+  - Length = 0.6 + 6.0·F/F_ref m.
+  - Width ×clip(√(Pe/Pa), 0.6, 1.8), with Pe from `nozzle1d` at the logged throttle and ISA ambient pressure.
+  - Switched off at engine cutoff.
+  - A point or sphere emitter left the fire trailing above a vehicle descending at 5–6 m/s (`scripts/flow_probe.py`, tags dA–dC). The box emitter (tag box5) stays attached.
+- **RCS:** a cone is drawn only while a thruster is actually firing. Failed thrusters (`--rcs_failed`) are red spheres, and red "FAIL" on the HUD engine ring.
+- **Cameras:** a 24 m chase camera, plus an engine close-up camera shown as picture-in-picture. The HUD is unchanged otherwise.
+- **Capture check:** each video has a `.manifest.json` recording the fraction of engine-on frames with flame-coloured pixels in the engine camera. This checks that the flame was captured; it is not a physics check.
+  - conical_A PD and PPO: 0.97 and 0.98.
+  - bell_C: 0.69. Its over-expanded jet (Pe/Pa ≈ 0.42) gives the narrowest, faintest plume.
+- **Videos** (each episode identical to its evaluation record):
+  - `videos/flow_pd_vs_ppo_m1_conical_A_s1004.mp4`
+  - `videos/flow_ppo_m1_bell_C_s1004_separation.mp4`
+  - `videos/flow_pd_conical_A_s1004_rcs01_failed.mp4`: rcs_01 failed and known to the PD allocator. Still landed, |vz| 1.27 m/s.

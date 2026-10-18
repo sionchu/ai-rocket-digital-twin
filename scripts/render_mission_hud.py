@@ -45,6 +45,7 @@ GMAX = math.radians(6.0)
 class Run:
     def __init__(self, name):
         d = MISSION / name
+        self.name = name
         self.tel = json.loads((d / "telemetry.json").read_text())
         self.reader = imageio.get_reader(d / "raw.mp4")
         self.reader2 = imageio.get_reader(d / "raw_engine.mp4") if (d / "raw_engine.mp4").exists() else None
@@ -287,6 +288,52 @@ def flame_footer(fig, run, y=0.0, h=0.02):
     a.text(0.5, 0.5, run.flame_note(), color=WARN, fontsize=8, ha="center", va="center", family="monospace")
 
 
+def flame_capture_check(run, max_frames=120):
+    """Was a flame actually captured? Fraction of engine-on frames whose engine-camera (else chase) image has
+    >= 100 flame-coloured pixels (R > 150, 80 < G < 215, R - B > 40). A capture check, not a physics check."""
+    on = [s for s in run.frame_steps if s["engine_on"]]
+    if not on:
+        return None
+    pick = on[:: max(1, len(on) // max_frames)]
+    hits = 0
+    for s in pick:
+        im = run.frame_engine(s)
+        im = run.frame(s["frame"]) if im is None else im
+        r, g, b = (im[..., i].astype(int) for i in range(3))
+        hits += int(((r > 150) & (g > 80) & (g < 215) & (r - b > 40)).sum() >= 100)
+    return {"frames_checked": len(pick), "frames_with_flame": hits, "fraction": hits / len(pick),
+            "camera": "engine" if run.reader2 is not None else "chase"}
+
+
+def write_manifest(runs, out):
+    import platform
+    import subprocess
+
+    def read(path):
+        q = Path(path)
+        return q.read_text().strip() if q.exists() else None
+
+    flow_ext = sorted(Path(r"C:\isaacsim\extscache").glob("omni.flowusd-*"))
+    man = {"label": "win-isaac", "video": out.name, "size_mb": round(out.stat().st_size / 2 ** 20, 2),
+           "software": {"isaaclab": read(r"C:\dev\IsaacLab\VERSION"), "isaacsim": read(r"C:\dev\IsaacLab\_isaac_sim\VERSION"),
+                        "omni.flowusd": flow_ext[-1].name.split("-", 1)[1] if flow_ext else None,
+                        "compositor_python": platform.python_version(), "matplotlib": matplotlib.__version__,
+                        "rocket_dt_commit": subprocess.run(["git", "describe", "--always", "--dirty"], cwd=REPO,
+                                                           capture_output=True, text=True).stdout.strip()},
+           "runs": []}
+    for r in runs:
+        t = r.tel
+        man["runs"].append({"name": r.name, "controller": t["controller"], "checkpoint": t.get("checkpoint"),
+                            "engine": t["engine"], "seed": t["seed"], "map_hash": t["map_hash"], "plume": t.get("plume"),
+                            "flow_tuning": t.get("flow_tuning"), "plume_mapping": t.get("plume_mapping"),
+                            "rcs_failed": t.get("rcs_failed", []), "episode": t.get("episode"),
+                            "n_frames": t.get("n_frames"), "flame_capture_check": flame_capture_check(r)})
+    man["note"] = ("Flame = visual representation of the 1D nozzle output (thrust -> length, Pe/Pa -> spread); "
+                   "it is not a combustion or plume CFD simulation and does not act on the vehicle.")
+    out.with_suffix(".manifest.json").write_text(json.dumps(man, indent=1))
+    return man
+
+
 def first_td(run):
     for s in run.steps:
         if s["touchdown"]:
@@ -373,4 +420,5 @@ if __name__ == "__main__":
     out = REPO / "runs/ppo_win-isaac/videos" / a.out
     out.parent.mkdir(parents=True, exist_ok=True)
     render_single(a.single, out) if a.single else render_pair(*a.pair, out)
-    print("HUD_DONE", out, round(out.stat().st_size / 2 ** 20, 2), "MB")
+    man = write_manifest([Run(n) for n in ([a.single] if a.single else a.pair)], out)
+    print("HUD_DONE", out, man["size_mb"], "MB", json.dumps([r["flame_capture_check"] for r in man["runs"]]))

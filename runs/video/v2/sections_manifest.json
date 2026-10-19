@@ -1,0 +1,47 @@
+{
+ "s1_motivation": {
+  "file": "s1_motivation.mp4",
+  "frames": 270,
+  "sha256_16": "f352cc3628ba9cb7",
+  "render_s": 10.0
+ },
+ "s2_engines": {
+  "file": "s2_engines.mp4",
+  "frames": 480,
+  "sha256_16": "16c8379565bec0a1",
+  "render_s": 141.2
+ },
+ "s3_isaac_check": {
+  "file": "s3_isaac_check.mp4",
+  "frames": 240,
+  "sha256_16": "0a0d6da7885ace57",
+  "render_s": 10.3
+ },
+ "s4_training": {
+  "file": "s4_training.mp4",
+  "frames": 1008,
+  "sha256_16": "c9ad43cf87baa81d",
+  "render_s": 47.6
+ },
+ "s5_scoreboard": {
+  "file": "s5_scoreboard.mp4",
+  "frames": 390,
+  "sha256_16": "75046e5046c150b6",
+  "render_s": 22.0
+ },
+ "s6_answer": {
+  "file": "s6_answer.mp4",
+  "frames": 300,
+  "sha256_16": "000892078c61082f",
+  "render_s": 10.5
+ },
+ "_meta": {
+  "commit": "aaf114b",
+  "matplotlib": "3.10.7",
+  "size": [
+   1920,
+   1080
+  ],
+  "fps": 30
+ }
+}

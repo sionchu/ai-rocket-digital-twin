@@ -28,3 +28,7 @@ runs/ppo_win-isaac/mission/ft_*/
 runs/ppo_win-isaac/flow_probe/
 runs/ppo_win-isaac/flow_probe*.log
 runs/ppo_win-isaac/hud_f*.log
+runs/ppo_win-isaac/grid/*/raw.mp4
+runs/ppo_win-isaac/grid/test_*/
+runs/ppo_win-isaac/grid*.log
+runs/ppo_win-isaac/mission[23]_*.log

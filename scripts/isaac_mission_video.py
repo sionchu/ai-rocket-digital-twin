@@ -38,6 +38,7 @@ parser.add_argument("--flow_speed", nargs=2, type=float, default=[10.0, 15.0], h
 parser.add_argument("--max_steps", type=int, default=3000)
 parser.add_argument("--rcs_failed", nargs="*", default=[], help="RCS ids failed from t=0 (known to the PD allocator)")
 parser.add_argument("--engine_cam", action="store_true", help="second camera close to the nozzle (picture-in-picture)")
+parser.add_argument("--look", choices=["default", "story"], default="default")
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 app = AppLauncher(args).app
@@ -115,6 +116,8 @@ def main():
     cfg.__post_init__()
     cfg.terminate_at_touchdown = False
     cfg.eval_scenarios = [{k: asdict(sc)[k] for k in keys}]
+    if args.look == "story":
+        cfg.sky_color, cfg.sky_intensity, cfg.sun_intensity = (0.30, 0.40, 0.56), 1200.0, 2500.0
     cfg.scene.num_envs = 1
     cfg.scene.env_spacing = 0.0
     cfg.viewer.origin_type = "world"
@@ -156,7 +159,12 @@ def main():
     veh = load_vehicle(REPO / "configs/vehicle_v0.yaml").with_engine(args.engine)
     mm = MassModel(veh, load_engine(REPO / f"configs/engines/{args.engine}.yaml"))
     pivot = np.array(veh.layout.main_engine.gimbal_pivot_body_m, float)
-    exit_z = float(mm.nozzle_exit_z_m)
+    from rocket_dt.isaac_env.rocket_env import NOZZLE_VIS_SCALE
+    from rocket_dt.propulsion.geometry import build_contour
+    _c = build_contour(load_engine(REPO / f"configs/engines/{args.engine}.yaml"))
+    # flame starts at the visible (scaled) nozzle exit; physics uses the real exit only through the thrust map
+    exit_z = float(pivot[2] - veh.mass.engine_throat_below_pivot_m
+                   - NOZZLE_VIS_SCALE * (_c.x_m[-1] - _c.x_m[_c.throat_index]))
     com_b = env.com_b.cpu().numpy().astype(float)
     rcs_pos = env.act.pos_b.cpu().numpy().astype(float)
     rcs_dir = env.act.dir_b.cpu().numpy().astype(float)
@@ -277,9 +285,10 @@ def main():
             ViewportManager.set_camera_view("/OmniverseKit_Persp", eye=eye.tolist(), target=target.tolist())
             if cam2 is not None:  # side view of the nozzle, 7 m out, slightly above the exit plane
                 side = np.array([math.cos(az + 1.2), math.sin(az + 1.2), 0.0])
-                e2 = exit_w + side * 8.0 + np.array([0.0, 0.0, 0.3])
+                noz_mid = exit_w + d_w * 0.35  # centre the scaled nozzle, flame in the lower part of the frame
+                e2 = noz_mid + side * 5.0 + np.array([0.0, 0.0, 0.4])
                 e2[2] = max(e2[2], 0.6)
-                ViewportManager.set_camera_view("/World/EngineCam", eye=e2.tolist(), target=(exit_w - d_w * 1.5).tolist())
+                ViewportManager.set_camera_view("/World/EngineCam", eye=e2.tolist(), target=(noz_mid - d_w * 0.8).tolist())
             fr = env.render()
             if fr is not None and np.asarray(fr).size:
                 writer.append_data(np.asarray(fr)[..., :3])

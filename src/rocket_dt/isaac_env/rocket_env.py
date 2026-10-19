@@ -58,6 +58,10 @@ ACT_DIM = sum(n for _, n in ACTION_SCHEMA_V1)
 OBS_SCALE = (1 / 10,) * 3 + (1 / 5,) * 3 + (1.0,) * 3 + (1.0,) * 3 + (1 / 50, 1 / 5, 1.0, 1.0, 1.0, 1.0, 1.0) + (1.0,) * 7
 
 
+NOZZLE_VIS_SCALE = 4.0  # visual only: real exit radius is 79-103 mm on a 1.2 m hull
+NOZZLE_COLOR = {"conical_A": (0.45, 0.62, 0.95), "bell_B": (0.95, 0.66, 0.25), "bell_C": (0.95, 0.45, 0.42)}
+
+
 def build_vehicle_usd(path: Path, engine_name: str) -> dict:
     """Write a one-body USD: RigidBody + MassAPI (full propellant) + visual hull + 4 foot sphere colliders."""
     from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics
@@ -83,12 +87,30 @@ def build_vehicle_usd(path: Path, engine_name: str) -> dict:
     hull.CreateHeightAttr(veh.mass.structure_length_m)
     hull.CreateAxisAttr("Z")
     hull.CreateDisplayColorAttr([Gf.Vec3f(0.85, 0.85, 0.9)])
-    noz = UsdGeom.Cone.Define(stage, "/Vehicle/nozzle")
-    noz.CreateRadiusAttr(0.35)
-    noz.CreateHeightAttr(0.7)
-    noz.CreateAxisAttr("Z")
-    noz.AddTranslateOp().Set(Gf.Vec3d(0, 0, veh.layout.main_engine.gimbal_pivot_body_m[2] - 0.2))
-    noz.CreateDisplayColorAttr([Gf.Vec3f(0.3, 0.3, 0.3)])
+    # visual nozzle: the engine's own contour revolved (all engines scaled by the same NOZZLE_VIS_SCALE so their
+    # relative size and shape are preserved), tinted per engine; visual only, no collider / mass
+    from rocket_dt.propulsion.geometry import build_contour
+    c = build_contour(eng)
+    xs, rs = c.x_m - c.x_m[c.throat_index], c.r_m
+    z_throat = veh.layout.main_engine.gimbal_pivot_body_m[2] - veh.mass.engine_throat_below_pivot_m
+    nseg = 36
+    pts, faces, counts = [], [], []
+    for j in range(len(xs)):
+        for k in range(nseg):
+            a_ = 2 * np.pi * k / nseg
+            pts.append(Gf.Vec3f(float(NOZZLE_VIS_SCALE * rs[j] * np.cos(a_)), float(NOZZLE_VIS_SCALE * rs[j] * np.sin(a_)),
+                                float(z_throat - NOZZLE_VIS_SCALE * xs[j])))
+    for j in range(len(xs) - 1):
+        for k in range(nseg):
+            k2 = (k + 1) % nseg
+            faces += [j * nseg + k, j * nseg + k2, (j + 1) * nseg + k2, (j + 1) * nseg + k]
+            counts.append(4)
+    noz = UsdGeom.Mesh.Define(stage, "/Vehicle/nozzle")
+    noz.CreatePointsAttr(pts)
+    noz.CreateFaceVertexIndicesAttr(faces)
+    noz.CreateFaceVertexCountsAttr(counts)
+    noz.CreateDoubleSidedAttr(True)
+    noz.CreateDisplayColorAttr([Gf.Vec3f(*NOZZLE_COLOR.get(engine_name, (0.3, 0.3, 0.3)))])
     r_foot = 0.15
     for k, f in enumerate(veh.gear.foot_positions_body_m):
         s = UsdGeom.Sphere.Define(stage, f"/Vehicle/foot_{k}")
@@ -136,6 +158,10 @@ class VtvlEnvCfg(DirectRLEnvCfg):
     map_source: str = "ideal1d"  # ideal1d | cfd (runs/cfd/maps/<engine>_cfd.json, cloud-v1912)
     asset_dir: str = str(REPO / "runs/ppo_win-isaac/assets")
     throttle0: float = 0.7  # evaluation/simulate.py ActuatorModel(throttle0=0.7)
+    # look only (render): dome light doubles as the sky colour
+    sky_color: tuple = (0.8, 0.8, 0.8)
+    sky_intensity: float = 2500.0
+    sun_intensity: float = 0.0
 
     # episode logic
     terminate_at_touchdown: bool = True  # training: end at first contact; evaluation: False + settle
@@ -252,8 +278,11 @@ class VtvlEnv(DirectRLEnv):
         self.scene.clone_environments(copy_from_source=False)
         if self.device == "cpu":
             self.scene.filter_collisions(global_prim_paths=[self.cfg.terrain.prim_path])
-        light = sim_utils.DomeLightCfg(intensity=2500.0, color=(0.8, 0.8, 0.8))
+        light = sim_utils.DomeLightCfg(intensity=self.cfg.sky_intensity, color=tuple(self.cfg.sky_color))
         light.func("/World/Light", light)
+        if self.cfg.sun_intensity > 0:  # white key light so a tinted sky does not tint the vehicle
+            sun = sim_utils.DistantLightCfg(intensity=self.cfg.sun_intensity, color=(1.0, 0.98, 0.95), angle=0.5)
+            sun.func("/World/Sun", sun, orientation=(0.82, 0.25, 0.35, 0.38))
 
     # ---------------------------------------------------------------- state helpers
     def _state(self):

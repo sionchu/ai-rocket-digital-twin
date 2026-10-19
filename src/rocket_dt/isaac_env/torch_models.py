@@ -70,20 +70,26 @@ class TorchPerfMap:
 
 class TorchActuators:
     """Vectorised ActuatorModel. RCS windows are kept in two slots (current + previous command),
-    which is exact while valve_delay + on_time <= 2 control periods (asserted)."""
+    which is exact while valve_delay + on_time <= 2 control periods (asserted).
 
-    def __init__(self, vehicle: VehicleConfig, engine: EngineDesign, num_envs: int, control_dt: float, device):
+    Generalised for engine layouts: `n_main` main engines with independent throttles (same lag and limits);
+    the gimbal applies to the layout's gimballed engine only (the env decides). `rcs` overrides the vehicle's
+    RCS list (layout d). `failed` is per env (N, K) so a scenario can fail a different thruster in each env."""
+
+    def __init__(self, vehicle: VehicleConfig, engine: EngineDesign, num_envs: int, control_dt: float, device,
+                 rcs=None, n_main: int = 1):
         me = vehicle.layout.main_engine
         f = dict(dtype=torch.float32, device=device)
-        self.n, self.device = num_envs, device
+        self.n, self.device, self.n_main = num_envs, device, n_main
         self.tmin, self.tmax = engine.throttle_min, engine.throttle_max
         self.tau = me.throttle_time_constant_s
         self.gmax, self.grate = me.max_gimbal_rad, me.max_gimbal_rate_rad_s
-        rcs = vehicle.layout.rcs
+        rcs = vehicle.layout.rcs if rcs is None else rcs
         self.k = len(rcs)
         self.delay = torch.tensor([t.valve_delay_s for t in rcs], **f)
         self.min_on = torch.tensor([t.min_on_time_s for t in rcs], **f)
-        self.failed = torch.tensor([t.failed for t in rcs], dtype=torch.bool, device=device)
+        self.failed_cfg = torch.tensor([bool(t.failed) for t in rcs], dtype=torch.bool, device=device)
+        self.failed = self.failed_cfg[None, :].repeat(num_envs, 1)
         self.fmax = torch.tensor([t.max_thrust_n for t in rcs], **f)
         self.dir_b = torch.tensor([t.force_direction_body for t in rcs], **f)
         self.pos_b = torch.tensor([t.position_body_m for t in rcs], **f)
@@ -91,42 +97,51 @@ class TorchActuators:
         if float((self.delay + control_dt).max()) > 2 * control_dt + 1e-9:
             raise NotImplementedError("RCS valve delay longer than one control period needs more window slots")
         self.engine_on = torch.ones(num_envs, dtype=torch.bool, device=device)
-        self.throttle = torch.zeros(num_envs, **f)
-        self.throttle_cmd = torch.zeros(num_envs, **f)
+        self.throttles = torch.zeros(num_envs, n_main, **f)
+        self.throttle_cmd = torch.zeros(num_envs, n_main, **f)
         self.gimbal = torch.zeros(num_envs, 2, **f)
         self.gimbal_cmd = torch.zeros(num_envs, 2, **f)
         self.win = torch.zeros(num_envs, self.k, 2, 2, **f)  # [env, thruster, slot, (start, end)]
         self.frac = torch.zeros(num_envs, self.k, **f)
 
+    @property
+    def throttle(self) -> torch.Tensor:
+        """Mean actual throttle over the main engines (N,)."""
+        return self.throttles.mean(dim=1)
+
     def reset(self, ids, throttle0: float):
         self.engine_on[ids] = True
-        self.throttle[ids] = min(max(throttle0, self.tmin), self.tmax)
-        self.throttle_cmd[ids] = self.throttle[ids]
+        self.throttles[ids] = min(max(throttle0, self.tmin), self.tmax)
+        self.throttle_cmd[ids] = self.throttles[ids]
         self.gimbal[ids] = 0.0
         self.gimbal_cmd[ids] = 0.0
         self.win[ids] = 0.0
         self.frac[ids] = 0.0
+        self.failed[ids] = self.failed_cfg
 
     def command(self, t_now: torch.Tensor, throttle: torch.Tensor, gimbal: torch.Tensor, rcs_on_time: torch.Tensor):
-        """t_now (N,), throttle (N,), gimbal (N, 2) [rad], rcs_on_time (N, K) [s]. Engine-off envs ignore it."""
+        """t_now (N,), throttle (N,) or (N, n_main), gimbal (N, 2) [rad], rcs_on_time (N, K) [s].
+        Engine-off envs ignore it."""
         on = self.engine_on
-        self.throttle_cmd = torch.where(on, throttle.clamp(self.tmin, self.tmax), torch.full_like(throttle, self.tmin))
+        thr = throttle if throttle.dim() == 2 else throttle[:, None].expand(-1, self.n_main)
+        self.throttle_cmd = torch.where(on[:, None], thr.clamp(self.tmin, self.tmax), torch.full_like(thr, self.tmin))
         self.gimbal_cmd = torch.where(on[:, None], gimbal.clamp(-self.gmax, self.gmax), torch.zeros_like(gimbal))
         dur = torch.where(rcs_on_time < 0.5 * self.min_on, torch.zeros_like(rcs_on_time),
                           torch.maximum(rcs_on_time, self.min_on))
-        dur = torch.where(on[:, None] & ~self.failed[None, :], dur, torch.zeros_like(dur))
+        dur = torch.where(on[:, None] & ~self.failed, dur, torch.zeros_like(dur))
         start = t_now[:, None] + self.delay[None, :]
         self.win[:, :, 1] = self.win[:, :, 0]
         self.win[:, :, 0, 0] = start
         self.win[:, :, 0, 1] = torch.where(dur > 0, start + dur, start)
 
     def step(self, t: torch.Tensor, dt: float):
+        """Returns per-engine throttles (N, n_main), gimbal (N, 2), RCS on-fraction (N, K)."""
         a = 1.0 - torch.exp(torch.tensor(-dt / self.tau)) if self.tau > 0 else torch.tensor(1.0)
-        self.throttle = (self.throttle + a * (self.throttle_cmd - self.throttle)).clamp(self.tmin, self.tmax)
+        self.throttles = (self.throttles + a * (self.throttle_cmd - self.throttles)).clamp(self.tmin, self.tmax)
         dg = (self.gimbal_cmd - self.gimbal).clamp(-self.grate * dt, self.grate * dt)
         self.gimbal = (self.gimbal + dg).clamp(-self.gmax, self.gmax)
         t0, t1 = t[:, None, None], (t + dt)[:, None, None]
         overlap = (torch.minimum(self.win[..., 1], t1) - torch.maximum(self.win[..., 0], t0)).clamp(min=0.0)
         frac = (overlap.sum(-1) / dt).clamp(0.0, 1.0)
-        self.frac = torch.where(self.failed[None, :], torch.zeros_like(frac), frac)
-        return self.throttle, self.gimbal, self.frac
+        self.frac = torch.where(self.failed, torch.zeros_like(frac), frac)
+        return self.throttles, self.gimbal, self.frac

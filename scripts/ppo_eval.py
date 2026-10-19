@@ -23,6 +23,8 @@ parser.add_argument("--checkpoint", default=None, help="PPO checkpoint (required
 parser.add_argument("--controller", default="ppo", choices=["ppo", "pd"],
                     help="pd = rocket_dt CascadedPD (numpy, per env) driving the same Isaac env through its action API")
 parser.add_argument("--engine", default="conical_A")
+parser.add_argument("--scenario", default="nominal", choices=["nominal", "wind", "rcs_fail", "noise", "lateral"])
+parser.add_argument("--layout", default="gimbal_rcs", choices=["gimbal_rcs", "tri_diff", "quad_diff", "coldgas"])
 parser.add_argument("--map_source", default="ideal1d")
 parser.add_argument("--n", type=int, default=30)
 parser.add_argument("--seed0", type=int, default=1000)
@@ -71,14 +73,18 @@ def summarize(recs):
 
 
 def main():
-    base = Scenario(**yaml.safe_load(open(REPO / "configs/scenarios/landing.yaml")))
-    scs = randomized_scenarios(base, args.n, args.seed0)
-    keys = ("com_position_w", "velocity_w", "tilt_axis", "tilt_rad", "omega_b", "disturbance_force_w")
+    from rocket_dt.isaac_env.layouts import layout_spec
+    from rocket_dt.isaac_env.scenarios import eval_scenarios
+    from rocket_dt.schemas import load_vehicle
+    n_rcs = len(layout_spec(args.layout, load_vehicle(REPO / "configs/vehicle_v0.yaml")).rcs)
+    torch.manual_seed(args.seed0)  # measurement-noise stream of the "noise" scenario
     cfg = VtvlEnvCfg()
     cfg.engine, cfg.map_source = args.engine, args.map_source
+    cfg.layout, cfg.scenario = args.layout, args.scenario
+    cfg.apply_scenario()
     cfg.__post_init__()  # regenerate the robot cfg for the selected engine's USD
     cfg.terminate_at_touchdown = False
-    cfg.eval_scenarios = [{k: asdict(s)[k] for k in keys} for s in scs]
+    cfg.eval_scenarios = eval_scenarios(args.scenario, args.n, args.seed0, n_rcs=n_rcs)
     n_episodes = args.video_episodes if args.video else args.n
     cfg.scene.num_envs = 1 if args.video else args.n
     if args.video:
@@ -120,8 +126,9 @@ def main():
             first.append(r)
     out = Path(args.out) if args.out else (ck.parent / "eval" if args.controller == "ppo" else ck.parent)
     out.mkdir(parents=True, exist_ok=True)
-    tag = f"{args.engine}_{args.map_source}" + ("_video" if args.video else "")
-    res = {"label": "win-isaac", "controller": args.controller, "checkpoint": str(ck) if args.controller == "ppo" else None, "engine": args.engine, "map_source": args.map_source,
+    tag = f"{args.engine}_{args.map_source}" + ("" if args.layout == "gimbal_rcs" else f"_{args.layout}") + \
+        ("" if args.scenario == "nominal" else f"_{args.scenario}") + ("_video" if args.video else "")
+    res = {"label": "win-isaac", "layout": args.layout, "scenario": args.scenario, "controller": args.controller, "checkpoint": str(ck) if args.controller == "ppo" else None, "engine": args.engine, "map_source": args.map_source,
            "map_hash": env.map_hash, "seeds": [args.seed0, args.seed0 + n_episodes - 1], "limits": LANDING_LIMITS,
            "settle_s": cfg.settle_s, "control_steps": steps, "summary": summarize(first) if first else None,
            "episodes": first}

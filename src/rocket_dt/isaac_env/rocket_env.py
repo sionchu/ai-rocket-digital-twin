@@ -38,6 +38,7 @@ from rocket_dt.dynamics.frames import G0
 from rocket_dt.dynamics.mass import MassModel
 from rocket_dt.evaluation.simulate import LANDING_LIMITS
 from rocket_dt.isaac_env.torch_models import TorchActuators, TorchPerfMap, gimbal_direction, isa_pressure
+from rocket_dt.isaac_env.layouts import layout_spec
 from rocket_dt.isaac_env.wrench_bridge import batched_wrench_torch
 from rocket_dt.propulsion.performance_map import EnginePerformanceMap, build_ideal_map
 from rocket_dt.schemas import load_engine, load_vehicle
@@ -62,7 +63,7 @@ NOZZLE_VIS_SCALE = 4.0  # visual only: real exit radius is 79-103 mm on a 1.2 m 
 NOZZLE_COLOR = {"conical_A": (0.45, 0.62, 0.95), "bell_B": (0.95, 0.66, 0.25), "bell_C": (0.95, 0.45, 0.42)}
 
 
-def build_vehicle_usd(path: Path, engine_name: str) -> dict:
+def build_vehicle_usd(path: Path, engine_name: str, layout: str = "gimbal_rcs") -> dict:
     """Write a one-body USD: RigidBody + MassAPI (full propellant) + visual hull + 4 foot sphere colliders."""
     from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics
 
@@ -105,12 +106,22 @@ def build_vehicle_usd(path: Path, engine_name: str) -> dict:
             k2 = (k + 1) % nseg
             faces += [j * nseg + k, j * nseg + k2, (j + 1) * nseg + k2, (j + 1) * nseg + k]
             counts.append(4)
-    noz = UsdGeom.Mesh.Define(stage, "/Vehicle/nozzle")
-    noz.CreatePointsAttr(pts)
-    noz.CreateFaceVertexIndicesAttr(faces)
-    noz.CreateFaceVertexCountsAttr(counts)
-    noz.CreateDoubleSidedAttr(True)
-    noz.CreateDisplayColorAttr([Gf.Vec3f(*NOZZLE_COLOR.get(engine_name, (0.3, 0.3, 0.3)))])
+    spec = layout_spec(layout, veh)
+    pivot_b = np.array(veh.layout.main_engine.gimbal_pivot_body_m, float)
+    for e_i, (epos, share) in enumerate(zip(spec.engine_pos_b, spec.engine_share)):
+        sc_ = float(np.sqrt(share))  # nozzle area ~ thrust share
+        noz = UsdGeom.Mesh.Define(stage, f"/Vehicle/nozzle_{e_i}")
+        noz.CreatePointsAttr([Gf.Vec3f(float(epos[0] + sc_ * q[0]), float(epos[1] + sc_ * q[1]),
+                                       float(pivot_b[2] + sc_ * (q[2] - pivot_b[2]))) for q in pts])
+        noz.CreateFaceVertexIndicesAttr(faces)
+        noz.CreateFaceVertexCountsAttr(counts)
+        noz.CreateDoubleSidedAttr(True)
+        noz.CreateDisplayColorAttr([Gf.Vec3f(*NOZZLE_COLOR.get(engine_name, (0.3, 0.3, 0.3)))])
+    for t in spec.rcs[4:]:  # layout d: radial cold-gas thrusters, drawn as small blocks
+        blk = UsdGeom.Cube.Define(stage, f"/Vehicle/{t.id}")
+        blk.CreateSizeAttr(0.16)
+        blk.AddTranslateOp().Set(Gf.Vec3d(*map(float, t.position_body_m)))
+        blk.CreateDisplayColorAttr([Gf.Vec3f(0.85, 0.3, 0.3)])
     r_foot = 0.15
     for k, f in enumerate(veh.gear.foot_positions_body_m):
         s = UsdGeom.Sphere.Define(stage, f"/Vehicle/foot_{k}")
@@ -163,6 +174,18 @@ class VtvlEnvCfg(DirectRLEnvCfg):
     sky_intensity: float = 2500.0
     sun_intensity: float = 0.0
 
+    # engine layout (layouts.py) and scenario (ADR-0010); defaults reproduce the nominal v0 env exactly
+    layout: str = "gimbal_rcs"
+    scenario: str = "nominal"  # nominal | wind | rcs_fail | noise | lateral
+    wind_max_n: float = 300.0  # nominal: randomized_scenarios; "wind" scenario raises it
+    gust_amp: float = 0.0  # relative gust amplitude (sinusoid), "wind" scenario
+    noise_pos_m: float = 0.0  # "noise" scenario: measurement noise (1 sigma) and 1-step latency
+    noise_vel_m_s: float = 0.0
+    noise_att_rad: float = 0.0
+    noise_rate_rad_s: float = 0.0
+    obs_delay_steps: int = 0
+    lateral_r_m: tuple = (0.0, 8.0)  # start radius range; "lateral" scenario uses (25, 45)
+
     # episode logic
     terminate_at_touchdown: bool = True  # training: end at first contact; evaluation: False + settle
     settle_s: float = 3.0  # Scenario.settle_s
@@ -190,8 +213,25 @@ class VtvlEnvCfg(DirectRLEnvCfg):
     rew_crash: float = -10.0
     rew_timeout: float = -10.0
 
+    def apply_scenario(self):
+        """Set the scenario knobs from `scenario` (call after changing it)."""
+        sc = self.scenario
+        if sc == "wind":
+            self.wind_max_n, self.gust_amp = 1500.0, 0.4
+        elif sc == "noise":
+            self.noise_pos_m, self.noise_vel_m_s, self.noise_att_rad, self.noise_rate_rad_s = 0.3, 0.15, 0.009, 0.02
+            self.obs_delay_steps = 1
+        elif sc == "lateral":
+            self.lateral_r_m, self.oob_horizontal_m = (25.0, 45.0), 80.0
+        elif sc not in ("nominal", "rcs_fail"):
+            raise ValueError(f"unknown scenario {sc}")
+
     def __post_init__(self):
-        usd = Path(self.asset_dir) / f"vtvl_v0_{self.engine}.usda"
+        from rocket_dt.isaac_env.layouts import layout_spec as _ls
+        spec = _ls(self.layout, load_vehicle(REPO / "configs/vehicle_v0.yaml").with_engine(self.engine))
+        self.action_space, self.observation_space = spec.act_dim, spec.obs_dim
+        tag = "" if self.layout == "gimbal_rcs" else f"_{self.layout}"
+        usd = Path(self.asset_dir) / f"vtvl_v0_{self.engine}{tag}.usda"
         self.robot = RigidObjectCfg(
             prim_path="/World/envs/env_.*/Vehicle",
             spawn=sim_utils.UsdFileCfg(
@@ -206,6 +246,13 @@ def _quat_axis_angle_xyzw(axis: torch.Tensor, ang: torch.Tensor) -> torch.Tensor
     axis = axis / axis.norm(dim=-1, keepdim=True).clamp(min=1e-9)
     s = torch.sin(ang / 2)[:, None]
     return torch.cat([axis * s, torch.cos(ang / 2)[:, None]], dim=-1)
+
+
+def _quat_mul_xyzw(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    ax, ay, az, aw = a.unbind(-1)
+    bx, by, bz, bw = b.unbind(-1)
+    return torch.stack([aw * bx + ax * bw + ay * bz - az * by, aw * by - ax * bz + ay * bw + az * bx,
+                        aw * bz + ax * by - ay * bx + az * bw, aw * bw - ax * bx - ay * by - az * bz], dim=-1)
 
 
 def _rotmat_xyzw(q: torch.Tensor) -> torch.Tensor:
@@ -223,7 +270,7 @@ class VtvlEnv(DirectRLEnv):
         # one USD per process: concurrent Isaac processes rewriting a shared file died silently at startup
         usd = Path(cfg.robot.spawn.usd_path)
         cfg.robot.spawn.usd_path = str(usd.with_name(f"{usd.stem}_{os.getpid()}{usd.suffix}"))
-        self.asset_info = build_vehicle_usd(Path(cfg.robot.spawn.usd_path), cfg.engine)
+        self.asset_info = build_vehicle_usd(Path(cfg.robot.spawn.usd_path), cfg.engine, cfg.layout)
         super().__init__(cfg, render_mode, **kwargs)
         if getattr(self, "_physics_handles_decimation", False):
             raise NotImplementedError("per-substep actuator/propulsion update requires physics-side decimation off")
@@ -244,26 +291,34 @@ class VtvlEnv(DirectRLEnv):
         self.map_hash = self.map_hashes[self.engine_names[0]] if len(pms) == 1 else self.map_hashes
         self.map = TorchPerfMap(pms, dev)
         self.engine_idx = torch.zeros(n, dtype=torch.long, device=dev)
-        self.act = TorchActuators(self.veh, self.eng, n, self.step_dt, dev)
+        self.spec = layout_spec(cfg.layout, self.veh)
+        self.act = TorchActuators(self.veh, self.eng, n, self.step_dt, dev, rcs=self.spec.rcs,
+                                  n_main=self.spec.n_engines)
+        self.eng_pos_b = torch.tensor(self.spec.engine_pos_b, **f)
+        self.eng_share = torch.tensor(self.spec.engine_share, **f)
         self.mass = float(ms.mass_kg)
         self.com_b = torch.tensor(ms.com_body_m, **f)
         self.pivot_b = torch.tensor(self.veh.layout.main_engine.gimbal_pivot_body_m, **f)
         feet = torch.tensor(self.veh.gear.foot_positions_body_m, **f).reshape(-1, 3)
         self.feet_b = feet
         self.td_com_z = float(ms.com_body_m[2] - feet[:, 2].min())  # CoM height when standing
-        self.prop0, self.rcs0 = float(mm.prop0), float(mm.rcs0)
+        self.prop0 = float(mm.prop0)
+        self.rcs0 = float(self.spec.rcs_gas_kg if self.spec.rcs_gas_kg is not None else mm.rcs0)
         self.gmax = self.veh.layout.main_engine.max_gimbal_rad
         self._target = torch.zeros(n, 3, **f)  # pad at env origin
         z = lambda *s: torch.zeros(n, *s, **f)  # noqa: E731
         self.m_prop, self.m_rcs, self.t, self.wind_w = z(), z(), z(), z(3)
-        self.actions, self.prev_actions = z(ACT_DIM), z(ACT_DIM)
+        self.actions, self.prev_actions = z(self.spec.act_dim), z(self.spec.act_dim)
+        self.wind_base, self.gust_period, self.gust_phase = z(3), z(), z()
+        self._meas_prev = None  # delayed measurement buffer ("noise" scenario)
         self.td = torch.zeros(n, dtype=torch.bool, device=dev)
         self.td_t, self.td_vz, self.td_vh, self.td_tilt, self.td_pos = z(), z(), z(), z(), z()
         self.invalid_steps = torch.zeros(n, dtype=torch.long, device=dev)
         self.fuel_used = z()
         self.phi = z()
         self.max_tilt = z()
-        self.obs_scale = torch.tensor(OBS_SCALE, **f)
+        core = (1 / 10,) * 3 + (1 / 5,) * 3 + (1.0,) * 3 + (1.0,) * 3 + (1 / 50, 1 / 5, 1.0, 1.0)
+        self.obs_scale = torch.tensor(core + (1.0,) * (self.spec.obs_dim - len(core)), **f)
         self.episode_results: list[dict] = []  # filled at reset (evaluation reads it)
         self._first_episode_done = torch.zeros(n, dtype=torch.bool, device=dev)
         self._episode_count = torch.zeros(n, dtype=torch.long, device=dev)
@@ -307,9 +362,16 @@ class VtvlEnv(DirectRLEnv):
         self.actions = actions.clone().clamp(-1.0, 1.0)
         a = self.actions
         tmin, tmax = self.act.tmin, self.act.tmax
-        throttle = tmin + (a[:, 0] + 1.0) * 0.5 * (tmax - tmin)
-        gimbal = a[:, 1:3] * self.gmax
-        rcs_on = (a[:, 3:7] + 1.0) * 0.5 * self.step_dt
+        nt = self.spec.n_throttle_actions
+        throttle = tmin + (a[:, :nt] + 1.0) * 0.5 * (tmax - tmin)
+        throttle = throttle[:, 0] if nt == 1 else throttle
+        k = nt
+        if self.spec.gimbal:
+            gimbal = a[:, k:k + 2] * self.gmax
+            k += 2
+        else:
+            gimbal = torch.zeros(self.num_envs, 2, device=self.device)
+        rcs_on = (a[:, k:k + self.act.k] + 1.0) * 0.5 * self.step_dt
         self.act.command(self.t, throttle, gimbal, rcs_on)
 
     def _apply_action(self):
@@ -326,18 +388,30 @@ class VtvlEnv(DirectRLEnv):
             self.td_tilt = torch.where(new_td, self._tilt(rot), self.td_tilt)
             self.td_pos = torch.where(new_td, (p[:, :2] - self._target[:, :2]).norm(dim=1), self.td_pos)
             self.act.engine_on &= ~new_td
-        thr, gim, frac = self.act.step(self.t, dt)
+        thrs, gim, frac = self.act.step(self.t, dt)
         pa = isa_pressure(p[:, 2].clamp(min=0.0))
-        f_main, mdot_main, valid = self.map.lookup(thr, pa, self.engine_idx)
+        n, E = self.num_envs, self.spec.n_engines
+        f_e, md_e, val_e = self.map.lookup(thrs.reshape(-1), pa.repeat_interleave(E),
+                                           self.engine_idx.repeat_interleave(E))
+        f_e = f_e.reshape(n, E) * self.eng_share
+        md_e = md_e.reshape(n, E) * self.eng_share
+        valid = val_e.reshape(n, E).all(dim=1)
         main_on = self.act.engine_on & (self.m_prop > 0)
-        f_main = torch.where(main_on, f_main, torch.zeros_like(f_main))
-        mdot_main = torch.where(main_on, mdot_main, torch.zeros_like(mdot_main))
+        f_e = torch.where(main_on[:, None], f_e, torch.zeros_like(f_e))
+        f_main = f_e.sum(1)
+        mdot_main = torch.where(main_on, md_e.sum(1), torch.zeros_like(f_main))
         self.invalid_steps += (main_on & ~valid).long()
         rcs_frac = torch.where((self.m_rcs > 0)[:, None], frac, torch.zeros_like(frac))
-        n = self.num_envs
-        force_b = torch.cat([(f_main[:, None] * gimbal_direction(gim))[:, None],
+        if self.spec.gimbal:
+            dirs = gimbal_direction(gim)[:, None].expand(n, E, 3)
+        else:
+            dirs = torch.tensor([0.0, 0.0, 1.0], device=self.device).expand(n, E, 3)
+        force_b = torch.cat([f_e[..., None] * dirs,
                              rcs_frac[..., None] * (self.act.fmax[:, None] * self.act.dir_b)[None]], dim=1)
-        pos_b = torch.cat([self.pivot_b.expand(n, 1, 3), self.act.pos_b.expand(n, -1, 3)], dim=1)
+        pos_b = torch.cat([self.eng_pos_b.expand(n, E, 3), self.act.pos_b.expand(n, -1, 3)], dim=1)
+        if self.cfg.gust_amp > 0:  # sinusoidal gust on the constant wind
+            g = 1.0 + self.cfg.gust_amp * torch.sin(2 * math.pi * self.t / self.gust_period + self.gust_phase)
+            self.wind_w = self.wind_base * g[:, None]
         F, tau = batched_wrench_torch(force_b, pos_b, self.com_b.expand(n, 3))
         # last physics step, for telemetry/visualisation only
         self.last_f_main, self.last_valid, self.last_rcs_frac, self.last_pa = f_main, valid & main_on, rcs_frac, pa
@@ -356,17 +430,37 @@ class VtvlEnv(DirectRLEnv):
                                      self.engine_idx)
         return fmax / (self.mass * G0)
 
-    def _get_observations(self) -> dict:
+    def measured_state(self, advance: bool = False):
+        """State as seen by the controller: true state, or (noise scenario) noisy and delayed by obs_delay_steps.
+        `advance=True` pushes the current true state into the delay buffer (once per control step)."""
         p, q, v, w_b = self._state()
+        if self.cfg.noise_pos_m <= 0 and self.cfg.obs_delay_steps == 0:
+            return p, q, v, w_b
+        if advance or self._meas_prev is None:
+            cur = (p.clone(), q.clone(), v.clone(), w_b.clone())
+            out = cur if self._meas_prev is None or self.cfg.obs_delay_steps == 0 else self._meas_prev
+            self._meas_prev = cur
+            n, dev = self.num_envs, self.device
+            pn = out[0] + torch.randn(n, 3, device=dev) * self.cfg.noise_pos_m
+            vn = out[2] + torch.randn(n, 3, device=dev) * self.cfg.noise_vel_m_s
+            wn = out[3] + torch.randn(n, 3, device=dev) * self.cfg.noise_rate_rad_s
+            dq = _quat_axis_angle_xyzw(torch.randn(n, 3, device=dev),
+                                       torch.randn(n, device=dev).abs() * self.cfg.noise_att_rad)
+            qn = _quat_mul_xyzw(out[1], dq)
+            self._meas = (pn, qn, vn, wn)
+        return self._meas
+
+    def _get_observations(self) -> dict:
+        p, q, v, w_b = self.measured_state(advance=True)
         rot = _rotmat_xyzw(q)
         rt = rot.transpose(1, 2)
         rel = (rt @ (self._target - p)[..., None]).squeeze(-1)
         v_b = (rt @ v[..., None]).squeeze(-1)
         g_b = (rt @ torch.tensor([0.0, 0.0, -1.0], device=self.device).expand_as(p)[..., None]).squeeze(-1)
+        thr_n = (self.act.throttles - self.act.tmin) / (self.act.tmax - self.act.tmin)
+        act_state = [thr_n.mean(1, keepdim=True), self.act.gimbal / self.gmax] if self.spec.gimbal else [thr_n]
         obs = torch.cat([rel, v_b, g_b, w_b, p[:, 2:3], v[:, 2:3], (self.m_prop / self.prop0)[:, None],
-                         self._available_thrust_norm(p)[:, None],
-                         ((self.act.throttle - self.act.tmin) / (self.act.tmax - self.act.tmin))[:, None],
-                         self.act.gimbal / self.gmax, self.actions], dim=-1) * self.obs_scale
+                         self._available_thrust_norm(p)[:, None], *act_state, self.actions], dim=-1) * self.obs_scale
         return {"policy": torch.nan_to_num(obs, nan=0.0, posinf=10.0, neginf=-10.0)}
 
     def _potential(self, p, v, rot, w_b):
@@ -503,16 +597,24 @@ class VtvlEnv(DirectRLEnv):
             ang = torch.tensor([s["tilt_rad"] for s in sc], device=dev)
             w_b = torch.tensor([s["omega_b"] for s in sc], device=dev)
             wind = torch.tensor([s["disturbance_force_w"] for s in sc], device=dev)
+            gper = torch.tensor([s.get("gust_period_s", 4.0) for s in sc], device=dev)
+            gph = torch.tensor([s.get("gust_phase", 0.0) for s in sc], device=dev)
+            fail_i = torch.tensor([s.get("rcs_failed", -1) for s in sc], device=dev)
         else:  # same distribution as evaluation.experiments.randomized_scenarios (torch RNG, not the seeds)
             u = lambda lo, hi: torch.rand(n, device=dev) * (hi - lo) + lo  # noqa: E731
             a = u(0, 2 * math.pi)
-            pos = torch.stack([8 * torch.sqrt(u(0, 1)) * torch.cos(a), 8 * torch.sqrt(u(0, 1)) * torch.sin(a), u(40, 80)], 1)
+            r0, r1 = self.cfg.lateral_r_m
+            rr = torch.sqrt(u(r0 * r0 / max(r1 * r1, 1e-9), 1.0)) * r1  # uniform in the annulus r0..r1
+            pos = torch.stack([rr * torch.cos(a), rr * torch.sin(a), u(40, 80)], 1)
             vel = torch.stack([u(-1.5, 1.5), u(-1.5, 1.5), u(-8, -4)], 1)
             axis = torch.stack([torch.cos(a + 1), torch.sin(a + 1), torch.zeros(n, device=dev)], 1)
             ang = torch.deg2rad(u(0, 4))
             w_b = torch.stack([torch.zeros(n, device=dev), torch.zeros(n, device=dev), u(-0.2, 0.2)], 1)
-            wd, wm = u(0, 2 * math.pi), u(0, 300.0)
+            wd, wm = u(0, 2 * math.pi), u(0, self.cfg.wind_max_n)
             wind = torch.stack([wm * torch.cos(wd), wm * torch.sin(wd), torch.zeros(n, device=dev)], 1)
+            gper, gph = u(3.0, 6.0), u(0, 2 * math.pi)
+            fail_i = (torch.randint(self.act.k if self.cfg.scenario == "rcs_fail" else 1, (n,), device=dev)
+                      if self.cfg.scenario == "rcs_fail" else torch.full((n,), -1, device=dev))
         q = _quat_axis_angle_xyzw(axis, ang)
         rot = _rotmat_xyzw(q)
         p_w = pos + self.scene.env_origins[env_ids]
@@ -521,9 +623,20 @@ class VtvlEnv(DirectRLEnv):
         w_w = (rot @ w_b[..., None]).squeeze(-1)
         self.robot.write_root_com_velocity_to_sim_index(root_velocity=torch.cat([vel, w_w], 1), env_ids=env_ids)
         self.wind_w[env_ids] = wind
+        self.wind_base[env_ids] = wind
+        self.gust_period[env_ids] = gper.float()
+        self.gust_phase[env_ids] = gph.float()
         if len(self.engine_names) > 1 and self.cfg.eval_scenarios is None:
             self.engine_idx[env_ids] = torch.randint(len(self.engine_names), (n,), device=dev)
         self.act.reset(env_ids, self.cfg.throttle0)
+        has_fail = fail_i >= 0
+        if has_fail.any():  # one RCS thruster fails for the whole episode (not observed by the controller)
+            fid = env_ids[has_fail]
+            self.act.failed[fid] = False
+            self.act.failed[fid, fail_i[has_fail].long()] = True
+        self.rcs_failed_idx = getattr(self, "rcs_failed_idx", torch.full((self.num_envs,), -1, device=dev))
+        self.rcs_failed_idx[env_ids] = fail_i.long()
+        self._meas_prev = None
         self.m_prop[env_ids] = self.prop0
         self.m_rcs[env_ids] = self.rcs0
         self.t[env_ids] = 0.0
@@ -533,6 +646,7 @@ class VtvlEnv(DirectRLEnv):
         self.invalid_steps[env_ids] = 0
         self.actions[env_ids] = 0.0
         self.prev_actions[env_ids] = 0.0
-        self.actions[env_ids, 0] = 2 * (self.cfg.throttle0 - self.act.tmin) / (self.act.tmax - self.act.tmin) - 1
-        self.actions[env_ids, 3:] = -1.0
+        nt = self.spec.n_throttle_actions
+        self.actions[env_ids, :nt] = 2 * (self.cfg.throttle0 - self.act.tmin) / (self.act.tmax - self.act.tmin) - 1
+        self.actions[env_ids, nt + (2 if self.spec.gimbal else 0):] = -1.0
         self.phi[env_ids] = 0.0

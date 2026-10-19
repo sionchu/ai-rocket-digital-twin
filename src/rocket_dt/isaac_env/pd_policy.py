@@ -24,6 +24,8 @@ class PDPolicy:
     """
 
     def __init__(self, env, engine: str, map_source: str):
+        if env.spec.name != "gimbal_rcs":
+            raise NotImplementedError("CascadedPD allocates gimbal + roll RCS; other layouts have no PD baseline")
         veh = load_vehicle(REPO / "configs/vehicle_v0.yaml").with_engine(engine)
         eng = load_engine(REPO / f"configs/engines/{engine}.yaml")
         pm = build_ideal_map(eng) if map_source == "ideal1d" else EnginePerformanceMap.load(
@@ -35,7 +37,8 @@ class PDPolicy:
 
     def __call__(self, obs):
         env = self.env
-        p, q, v, w_b = (t.detach().cpu().numpy().astype(float) for t in env._state())
+        # the controller sees the measured state (noise / latency in the "noise" scenario, else the true state)
+        p, q, v, w_b = (t.detach().cpu().numpy().astype(float) for t in env.measured_state())
         mp, mr = env.m_prop.cpu().numpy().astype(float), env.m_rcs.cpu().numpy().astype(float)
         thr_act = env.act.throttle.cpu().numpy().astype(float)
         tmin, tmax, gmax, sdt = env.act.tmin, env.act.tmax, env.gmax, env.step_dt

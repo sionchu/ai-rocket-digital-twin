@@ -1,0 +1,6 @@
+{"iter": 0, "best_score": 12.03304043231875, "mean_score": 7.689060606465493, "best_success": 12, "elapsed_s": 457.60901856422424}
+{"iter": 1, "best_score": 11.033306727628958, "mean_score": 9.276622827803056, "best_success": 11, "elapsed_s": 1055.503702878952}
+{"iter": 2, "best_score": 14.035515935345467, "mean_score": 11.365979801033967, "best_success": 14, "elapsed_s": 1628.740469455719}
+{"iter": 3, "best_score": 14.036255138277886, "mean_score": 11.784198280905605, "best_success": 14, "elapsed_s": 2227.8164138793945}
+{"iter": 4, "best_score": 14.037770538380723, "mean_score": 12.369424359269152, "best_success": 14, "elapsed_s": 2879.7271802425385}
+{"seeds": "1000.. and 2000..", "n": 60, "default_success": 41, "tuned_success": 44, "default_reasons": {"landed": 41, "horizontal_speed": 10, "position_error": 9}, "tuned_reasons": {"landed": 44, "horizontal_speed": 9, "position_error": 7}}

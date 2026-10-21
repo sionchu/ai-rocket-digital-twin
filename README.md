@@ -11,7 +11,7 @@ Simulation only.
 
 | Scenario | Fixed-gain PD | RL trained on nominal | RL trained for the scenario |
 |---|---|---|---|
-| Nominal | 60 | 56–57 | – |
+| Nominal | 60 | 57 | – |
 | Strong gusty wind (≤ 1500 N) | 43 | 20 | 54 |
 | RCS thruster failure (unannounced) | 60 | 27 | 57 |
 | Sensor noise + 20 ms latency | 60 | 60 | 17 (fine-tune failed) |

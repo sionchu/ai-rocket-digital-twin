@@ -3,3 +3,4 @@
 {"iter": 2, "best_score": 8.064457709049083, "mean_score": 7.47545639761922, "best_success": 8, "elapsed_s": 780.8785781860352}
 {"iter": 3, "best_score": 8.065787457594848, "mean_score": 8.062829088537457, "best_success": 8, "elapsed_s": 1261.846463918686}
 {"seeds": "1000.. and 2000..", "n": 60, "default_success": 39, "tuned_success": 60, "default_reasons": {"horizontal_speed": 17, "landed": 39, "touchdown_tilt": 4}, "tuned_reasons": {"landed": 60}}
+ALLDONE

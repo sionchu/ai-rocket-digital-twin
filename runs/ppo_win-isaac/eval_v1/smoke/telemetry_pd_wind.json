@@ -1,0 +1,122 @@
+{
+ "scenario": "wind",
+ "steps": 1097,
+ "nan_obs_steps": 0,
+ "mass_start_kg": [
+  1207.068603515625,
+  1207.066650390625,
+  1207.06982421875,
+  1207.0704345703125,
+  1207.0673828125,
+  1207.0693359375,
+  1207.069091796875,
+  1207.067626953125
+ ],
+ "mass_min_kg": [
+  1137.5308837890625,
+  1132.1309814453125,
+  1127.198486328125,
+  1117.606689453125,
+  1109.581787109375,
+  1107.8360595703125,
+  1135.4482421875,
+  1116.4102783203125
+ ],
+ "mass_monotone_nonincreasing": false,
+ "wind_ref_mps": [
+  14.962169647216797,
+  17.983928680419922,
+  13.908453941345215,
+  16.266685485839844,
+  18.070390701293945,
+  13.799666404724121,
+  0.5663448572158813,
+  1.7741767168045044
+ ],
+ "F_aero_median_n": [
+  932.3013916015625,
+  1421.9515380859375,
+  879.581787109375,
+  1368.9384765625,
+  1564.4315185546875,
+  1404.941162109375,
+  20.61785888671875,
+  28.113563537597656
+ ],
+ "F_aero_max_n": [
+  2340.818115234375,
+  3171.673583984375,
+  2231.91162109375,
+  2639.36376953125,
+  3560.86328125,
+  2892.916748046875,
+  62.13916778564453,
+  75.26725769042969
+ ],
+ "episodes": [
+  {
+   "scenario_index": 0,
+   "termination_reason": "landed",
+   "touchdown": true,
+   "success": true,
+   "td_vz": -0.8125553727149963,
+   "fuel_used_kg": 69.54191589355469
+  },
+  {
+   "scenario_index": 6,
+   "termination_reason": "landed",
+   "touchdown": true,
+   "success": true,
+   "td_vz": -0.8341211080551147,
+   "fuel_used_kg": 71.61186218261719
+  },
+  {
+   "scenario_index": 1,
+   "termination_reason": "landing_limits",
+   "touchdown": true,
+   "success": false,
+   "td_vz": -0.780356228351593,
+   "fuel_used_kg": 74.91040802001953
+  },
+  {
+   "scenario_index": 2,
+   "termination_reason": "landing_limits",
+   "touchdown": true,
+   "success": false,
+   "td_vz": -0.750655472278595,
+   "fuel_used_kg": 79.83733367919922
+  },
+  {
+   "scenario_index": 7,
+   "termination_reason": "landed",
+   "touchdown": true,
+   "success": true,
+   "td_vz": -0.8046534061431885,
+   "fuel_used_kg": 90.65068054199219
+  },
+  {
+   "scenario_index": 3,
+   "termination_reason": "landing_limits",
+   "touchdown": true,
+   "success": false,
+   "td_vz": -0.8786894679069519,
+   "fuel_used_kg": 89.47355651855469
+  },
+  {
+   "scenario_index": 4,
+   "termination_reason": "landing_limits",
+   "touchdown": true,
+   "success": false,
+   "td_vz": -0.5544461607933044,
+   "fuel_used_kg": 97.55225372314453
+  },
+  {
+   "scenario_index": 5,
+   "termination_reason": "landing_limits",
+   "touchdown": true,
+   "success": false,
+   "td_vz": -0.7919593453407288,
+   "fuel_used_kg": 99.14939880371094
+  }
+ ]
+}

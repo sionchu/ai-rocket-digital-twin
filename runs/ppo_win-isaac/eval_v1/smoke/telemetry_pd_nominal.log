@@ -1,0 +1,43 @@
+﻿C:\dev\IsaacLab\isaaclab.bat : [WARNING] _isaac_sim is present but _isaac_sim\setup_conda_env.bat is missing; Isaac Sim
+ env vars not exported. 
+At line:1 char:755
++ ... _v1\smoke"; C:\dev\IsaacLab\isaaclab.bat -p $p --scenario nominal --o ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([WARNING] _isaa... not exported. :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[WARNING] Re-extract the Isaac Sim Windows zip if you intend to use the bundled binary. 
+The '--headless' CLI argument is deprecated. Omit '--viz' for default headless. If config visualizers are enabled and y
+ou want to force headless, use '--viz none'.
+[ISAACLAB] AppLauncher initialization complete
+[INFO]: Base environment:
+	Environment device    : cuda:0
+	Environment seed      : None
+	Physics step-size     : 0.005
+	Rendering step-size   : 0.02
+	Environment step-size : 0.02
+[INFO]: libcarb.so unavailable — Fabric notice suspension disabled (Linux x86_64 only)
+[INFO]: Registered backend 'physx' for factory RigidObject.
+C:\Users\getch\AppData\Local\Temp\claude\D--Workspace\09d07e14-3aed-4d5c-8b81-7458a6a71479\scratchpad\probe_v1.py:22: D
+eprecationWarning: The `root_state_w` property will be deprecated in IsaacLab 4.0. Please use `root_link_pose_w` and `r
+oot_com_vel_w` instead.
+  st = env.robot.data.root_state_w if hasattr(env.robot.data, "root_state_w") else None
+[INFO]: Time taken for scene creation Last: 1.052868 s, Mean: 1.052868 s, Std: 0.000000 s, N: 1
+[INFO]: Scene manager:  <class InteractiveScene>
+	Number of environments: 8
+	Environment spacing   : 40.0
+	Source prim name      : /World/envs/env_0
+	Global prim paths     : []
+	Replicate physics     : True
+[INFO]: Starting the simulation. This may take a few seconds. Please wait...
+[INFO]: Time taken for simulation start Last: 0.463272 s, Mean: 0.463272 s, Std: 0.000000 s, N: 1
+[INFO]: Completed setting up the environment...
+PROBE {"scenario": "nominal", "steps": 1030, "nan_obs_steps": 0, "mass_start_kg": [1207.068603515625, 1207.066650390625, 1207.06982421875, 1207.0704345703125, 1207.0673828125, 1207.0693359375, 1207.069091796875, 1207.067626953125], "mass_min_kg": [1140.726806640625, 1140.783447265625, 1127.680419921875, 1121.5726318359375, 1117.9989013671875, 1113.2972412109375, 1135.1549072265625, 1116.1551513671875], "mass_monotone_nonincreasing": false, "mass_increases": [[746, 1, 1140.783447265625, 1207.18603515625], [754, 0, 1140.726806640625, 1207.18603515625], [811, 6, 1135.1549072265625, 1207.18603515625], [888, 2, 1127.680419921875, 1207.18603515625], [951, 3, 1121.5726318359375, 1207.18603515625], [976, 4, 1117.9989013671875, 1207.18603515625], [995, 7, 1116.1551513671875, 1207.18603515625], [1028, 5, 1113.2972412109375, 1207.18603515625]], "wind_ref_mps": [4.874933242797852, 3.077550172805786, 6.142190456390381, 4.996281623840332, 2.643470287322998, 3.8075077533721924, 3.8767714500427246, 5.695952892303467], "F_aero_median_n": [168.9200210571289, 50.7735481262207, 281.2947692871094, 170.9888916015625, 52.59993553161621, 113.64990997314453, 114.0989761352539, 233.04206085205078], "F_aero_max_n": [379.06683349609375, 109.80000305175781, 602.2421875, 568.7424926757812, 174.4894561767578, 293.6880187988281, 171.45147705078125, 393.695556640625]}
+[INFO]: SimulationContext cleared
+Loading user config located at: 'c:/dev/isaaclab/_isaac_sim/kit/data/Kit/IsaacLab/3.0/user.config.json'
+2026-10-21T16:27:52Z [0ms] [Warning] [omni.ext.plugin] [ext: isaaclab_visualizers] Extensions config 'extension.toml' doesn't exist 'c:/dev/isaaclab/source/isaaclab_visualizers' or 'c:/dev/isaaclab/source/isaaclab_visualizers/config'
+2026-10-21T16:27:53Z [503ms] [Warning] [omni.usd_config.extension] Enable omni.materialx.libs extension to use MaterialX
+2026-10-21T16:27:59Z [6,298ms] [Warning] [isaaclab.envs.direct_rl_env] Seed not set for the environment. The environment creation may not be deterministic.
+2026-10-21T16:27:59Z [6,333ms] [Warning] [isaaclab_physx.physics.physx_manager] TGS solver with enable_external_forces_every_iteration=False may cause noisy velocities.
+2026-10-21T16:28:00Z [7,772ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+[INFO] Using Python: "C:\dev\IsaacLab\_isaac_sim\kit\python\python.exe"

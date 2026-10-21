@@ -65,8 +65,10 @@ NOZZLE_VIS_SCALE = 4.0  # visual only: real exit radius is 79-103 mm on a 1.2 m 
 NOZZLE_COLOR = {"conical_A": (0.45, 0.62, 0.95), "bell_B": (0.95, 0.66, 0.25), "bell_C": (0.95, 0.45, 0.42)}
 
 
-def build_vehicle_usd(path: Path, engine_name: str, layout: str = "gimbal_rcs") -> dict:
-    """Write a one-body USD: RigidBody + MassAPI (full propellant) + visual hull + 4 foot sphere colliders."""
+def build_vehicle_usd(path: Path, engine_name: str, layout: str = "gimbal_rcs", visual: str = "v0") -> dict:
+    """Write a one-body USD: RigidBody + MassAPI (full propellant) + visual hull + 4 foot sphere colliders.
+    visual "v1": the v0 placeholder geometry is replaced by the assets/vtvl_v1 vehicle (visual only; physics,
+    colliders and mass are identical), and the collider spheres are hidden."""
     from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics
 
     veh = load_vehicle(REPO / "configs/vehicle_v0.yaml").with_engine(engine_name)
@@ -138,6 +140,14 @@ def build_vehicle_usd(path: Path, engine_name: str, layout: str = "gimbal_rcs") 
         leg.AddTranslateOp().Set(mid)
         rot = Gf.Rotation(Gf.Vec3d(0, 0, 1), Gf.Vec3d(f[0] / 2, f[1] / 2, -1.5))
         leg.AddOrientOp().Set(Gf.Quatf(rot.GetQuat()))
+    if visual == "v1":
+        from rocket_dt.isaac_env.visual_assets import author_vehicle_visuals
+        for prim in list(stage.GetPrimAtPath("/Vehicle").GetChildren()):
+            if prim.GetName().startswith("foot_"):
+                UsdGeom.Imageable(prim).MakeInvisible()
+            else:
+                stage.RemovePrim(prim.GetPath())
+        author_vehicle_visuals(stage, "/Vehicle", layout, engine_name)
     stage.GetRootLayer().Save()
     return {"mass_kg": float(ms.mass_kg), "com_body_m": ms.com_body_m.tolist(),
             "inertia_diag": np.diag(ms.inertia_com_body).tolist(), "foot_radius_m": r_foot,
@@ -192,6 +202,8 @@ class VtvlEnvCfg(DirectRLEnvCfg):
     # variable_mass: true mass/CoM/inertia from the burned propellant via a compensating wrench on the fixed body
     aero: bool = False
     variable_mass: bool = False
+    # look only: "v1" = assets/vtvl_v1 vehicle, concrete pad + lakebed per env, baked sky dome + sun
+    visual: str = "v0"
 
     # episode logic
     terminate_at_touchdown: bool = True  # training: end at first contact; evaluation: False + settle
@@ -277,7 +289,7 @@ class VtvlEnv(DirectRLEnv):
         # one USD per process: concurrent Isaac processes rewriting a shared file died silently at startup
         usd = Path(cfg.robot.spawn.usd_path)
         cfg.robot.spawn.usd_path = str(usd.with_name(f"{usd.stem}_{os.getpid()}{usd.suffix}"))
-        self.asset_info = build_vehicle_usd(Path(cfg.robot.spawn.usd_path), cfg.engine, cfg.layout)
+        self.asset_info = build_vehicle_usd(Path(cfg.robot.spawn.usd_path), cfg.engine, cfg.layout, cfg.visual)
         super().__init__(cfg, render_mode, **kwargs)
         if getattr(self, "_physics_handles_decimation", False):
             raise NotImplementedError("per-substep actuator/propulsion update requires physics-side decimation off")
@@ -352,6 +364,21 @@ class VtvlEnv(DirectRLEnv):
         self.scene.clone_environments(copy_from_source=False)
         if self.device == "cpu":
             self.scene.filter_collisions(global_prim_paths=[self.cfg.terrain.prim_path])
+        if self.cfg.visual == "v1":
+            from rocket_dt.isaac_env.visual_assets import PAD_USD, SKY_HDR, SKY_SUN_AZIMUTH_DEG, SKY_SUN_ELEVATION_DEG
+            pad = sim_utils.UsdFileCfg(usd_path=str(PAD_USD))
+            pad.func("/World/envs/env_.*/Pad", pad)
+            dome = sim_utils.DomeLightCfg(intensity=1000.0, texture_file=str(SKY_HDR), texture_format="latlong")
+            dome.func("/World/Light", dome)
+            # sun along the baked sky's sun direction: rotate the light's -Z onto -(sun direction)
+            e, a = math.radians(SKY_SUN_ELEVATION_DEG), math.radians(SKY_SUN_AZIMUTH_DEG)
+            to_sun = np.array([math.cos(e) * math.cos(a), math.cos(e) * math.sin(a), math.sin(e)])
+            axis = np.cross([0.0, 0.0, 1.0], to_sun)
+            ang = math.acos(float(np.clip(to_sun[2], -1, 1)))
+            axis = axis / np.linalg.norm(axis)
+            sun = sim_utils.DistantLightCfg(intensity=3000.0, color=(1.0, 0.93, 0.82), angle=0.53)
+            sun.func("/World/Sun", sun, orientation=(math.cos(ang / 2), *(axis * math.sin(ang / 2))))
+            return
         light = sim_utils.DomeLightCfg(intensity=self.cfg.sky_intensity, color=tuple(self.cfg.sky_color))
         light.func("/World/Light", light)
         if self.cfg.sun_intensity > 0:  # white key light so a tinted sky does not tint the vehicle

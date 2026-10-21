@@ -1,0 +1,18 @@
+{
+  "vehicles": {
+    "gimbal_rcs/conical_A": "vehicle_gimbal_rcs_conical_A.usd",
+    "gimbal_rcs/bell_B": "vehicle_gimbal_rcs_bell_B.usd",
+    "gimbal_rcs/bell_C": "vehicle_gimbal_rcs_bell_C.usd",
+    "tri_diff/conical_A": "vehicle_tri_diff_conical_A.usd",
+    "tri_diff/bell_B": "vehicle_tri_diff_bell_B.usd",
+    "tri_diff/bell_C": "vehicle_tri_diff_bell_C.usd",
+    "quad_diff/conical_A": "vehicle_quad_diff_conical_A.usd",
+    "quad_diff/bell_B": "vehicle_quad_diff_bell_B.usd",
+    "quad_diff/bell_C": "vehicle_quad_diff_bell_C.usd",
+    "coldgas/conical_A": "vehicle_coldgas_conical_A.usd",
+    "coldgas/bell_B": "vehicle_coldgas_bell_B.usd",
+    "coldgas/bell_C": "vehicle_coldgas_bell_C.usd"
+  },
+  "pad": "pad.usd",
+  "sky": "sky_2k.hdr"
+}

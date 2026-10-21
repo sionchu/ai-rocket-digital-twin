@@ -11,8 +11,12 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from pathlib import Path
+
 from rocket_dt.control.baseline import CascadedPD, PDGains
-from rocket_dt.dynamics.frames import isa_pressure, quat_from_axis_angle, quat_to_rotmat, tilt_angle
+from rocket_dt.dynamics.aero import AeroModel
+from rocket_dt.dynamics.frames import (isa_pressure, quat_from_axis_angle, quat_mul, quat_normalize, quat_to_rotmat,
+                                       tilt_angle)
 from rocket_dt.dynamics.mass import MassModel
 from rocket_dt.dynamics.reference_6dof import (IDX_MP, IDX_MR, IDX_P, IDX_Q, IDX_V, IDX_W, Reference6DoF,
                                                StepInputs, make_state)
@@ -46,6 +50,17 @@ class Scenario:
     fault_known_to_controller: bool = True  # False: actuator fails silently, allocator still uses it
     seed: int = 0
     propellant_mass_kg: float | None = None  # override initial load
+    # ADR-0011 (all off by default = v0 behaviour)
+    aero: bool = False  # quasi-steady aero (configs/aero_v0.yaml); the wind becomes a wind velocity
+    wind_ref_w: list | None = None  # wind at the reference height; None + aero -> from disturbance_force_w
+    gust_amp: float = 0.0  # sinusoidal gust: force x (1 + a sin), or wind speed x sqrt(1 + a sin) with aero
+    gust_period_s: float = 4.0
+    gust_phase: float = 0.0
+    noise_pos_m: float = 0.0  # controller measurement noise (1 sigma) and latency in control steps
+    noise_vel_m_s: float = 0.0
+    noise_att_rad: float = 0.0
+    noise_rate_rad_s: float = 0.0
+    obs_delay_steps: int = 0
 
 
 def run_scenario(sc: Scenario, vehicle: VehicleConfig, mass_engine: EngineDesign, map_engine: EngineDesign,
@@ -54,7 +69,9 @@ def run_scenario(sc: Scenario, vehicle: VehicleConfig, mass_engine: EngineDesign
         raise ValueError("map/engine id mismatch")
     veh = vehicle.with_engine(map_engine.engine_design_id)
     mm = MassModel(veh.with_engine(mass_engine.engine_design_id), mass_engine)
-    dyn = Reference6DoF(mm, veh.gear)
+    aero = AeroModel.load(Path(__file__).resolve().parents[3] / "configs/aero_v0.yaml", veh.mass.structure_radius_m,
+                          veh.mass.structure_length_m) if sc.aero else None
+    dyn = Reference6DoF(mm, veh.gear, aero)
     adapter = PropulsionAdapter(veh, perf_map)
     act = ActuatorModel(veh, map_engine, throttle0=0.7)
     dt = 1.0 / sc.physics_hz
@@ -72,6 +89,17 @@ def run_scenario(sc: Scenario, vehicle: VehicleConfig, mass_engine: EngineDesign
     feet = np.array(veh.gear.foot_positions_body_m)
     d_force = np.asarray(sc.disturbance_force_w, float)
     d_torque = np.asarray(sc.disturbance_torque_b, float)
+    wind_ref = None
+    if aero is not None:  # the v0 wind force becomes the wind speed that gives that force (ADR-0011)
+        if sc.wind_ref_w is not None:
+            wind_ref = np.asarray(sc.wind_ref_w, float)
+        else:
+            fm = np.linalg.norm(d_force)
+            wind_ref = d_force / fm * aero.wind_speed_for_force(fm) if fm > 0 else np.zeros(3)
+        d_force = np.zeros(3)
+    rng = np.random.default_rng(20_000 + sc.seed)  # measurement noise stream
+    noisy = sc.noise_pos_m > 0 or sc.obs_delay_steps > 0
+    x_hist = []
 
     log = {k: [] for k in ("t", "p", "v", "q", "w", "m_prop", "m_rcs", "throttle", "gimbal", "rcs_frac",
                            "thrust", "contacts", "map_valid", "mass", "com_b")}
@@ -88,7 +116,17 @@ def run_scenario(sc: Scenario, vehicle: VehicleConfig, mass_engine: EngineDesign
         if k % n_sub == 0:
             td_com_z = ms.com_body_m[2] - feet[:, 2].min()
             if engine_on:
-                cmd = ctrl(x, pa, "hover" if sc.mode == "hover" else "descent", sc.target_w, td_com_z,
+                x_c = x
+                if noisy:
+                    x_hist.append(x.copy())
+                    x_c = x_hist[max(0, len(x_hist) - 1 - sc.obs_delay_steps)].copy()
+                    x_c[IDX_P] += rng.normal(0, sc.noise_pos_m, 3)
+                    x_c[IDX_V] += rng.normal(0, sc.noise_vel_m_s, 3)
+                    x_c[IDX_W] += rng.normal(0, sc.noise_rate_rad_s, 3)
+                    ax = rng.normal(size=3)
+                    dq = quat_from_axis_angle(ax / np.linalg.norm(ax), abs(rng.normal()) * sc.noise_att_rad)
+                    x_c[IDX_Q] = quat_normalize(quat_mul(x_c[IDX_Q], dq))
+                cmd = ctrl(x_c, pa, "hover" if sc.mode == "hover" else "descent", sc.target_w, td_com_z,
                            act.state.throttle, failed if sc.fault_known_to_controller else None)
                 act.command(t, True, cmd.throttle, cmd.gimbal_rad, cmd.rcs_on_time_s)
             else:
@@ -97,7 +135,10 @@ def run_scenario(sc: Scenario, vehicle: VehicleConfig, mass_engine: EngineDesign
         out = adapter.thruster_forces(a, pa, x[IDX_MP], x[IDX_MR], failed)
         if not out.map_valid:
             map_invalid_steps += 1
-        x = dyn.step(x, StepInputs(out.forces, out.main_mass_flow_kg_s, out.rcs_mass_flow_kg_s, d_force, d_torque), dt)
+        gust = 1.0 + sc.gust_amp * np.sin(2 * np.pi * t / sc.gust_period_s + sc.gust_phase)
+        wind_t = None if wind_ref is None else wind_ref * np.sqrt(gust)
+        x = dyn.step(x, StepInputs(out.forces, out.main_mass_flow_kg_s, out.rcs_mass_flow_kg_s, d_force * gust,
+                                   d_torque, wind_t), dt)
         t += dt
         k += 1
         if k % n_sub == 0:

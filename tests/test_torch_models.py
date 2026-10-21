@@ -93,3 +93,39 @@ def test_stacked_maps_select_per_env():
     for k, (m, t) in enumerate(zip([maps[0], maps[1], maps[2], maps[2]], thr.tolist())):
         rf, _, _, rok = m.lookup(t, 101325.0)
         assert abs(f[k].item() - rf) / rf < 1e-5 and bool(ok[k]) == rok
+
+
+def test_aero_varmass_mass_torch_match_numpy():
+    """ADR-0011 code is backend neutral: torch results equal the numpy (reference) results."""
+    from rocket_dt.dynamics.aero import AeroModel, aero_wrench
+    from rocket_dt.dynamics.mass import MassModel
+    from rocket_dt.dynamics.varmass import compensated_wrench
+    from rocket_dt.schemas import load_engine, load_vehicle
+    root = Path(__file__).resolve().parents[1]
+    veh = load_vehicle(root / "configs/vehicle_v0.yaml").with_engine("conical_A")
+    mm = MassModel(veh, load_engine(root / "configs/engines/conical_A.yaml"))
+    am = AeroModel.load(root / "configs/aero_v0.yaml", 0.6, 7.0)
+    rng = np.random.default_rng(0)
+    n = 5
+    a = np.linalg.qr(rng.normal(size=(n, 3, 3)))[0]
+    rot = a * np.sign(np.linalg.det(a))[:, None, None]
+    p_z, v, w = rng.uniform(1, 60, n), rng.normal(0, 5, (n, 3)), rng.normal(0, 0.3, (n, 3))
+    com, wind = np.c_[np.zeros((n, 2)), rng.uniform(-0.4, -0.2, n)], rng.normal(0, 8, (n, 3)) * [1, 1, 0]
+    t = lambda x: torch.tensor(np.asarray(x), dtype=torch.float64)  # noqa: E731
+    f_np, tq_np = aero_wrench(am.arrays(), p_z, rot, v, w, com, wind)
+    f_t, tq_t = aero_wrench(am.arrays(t), t(p_z), t(rot), t(v), t(w), t(com), t(wind))
+    np.testing.assert_allclose(f_t.numpy(), f_np, rtol=1e-9, atol=1e-9)
+    np.testing.assert_allclose(tq_t.numpy(), tq_np, rtol=1e-9, atol=1e-9)
+    mp, mr = rng.uniform(0, 450, n), rng.uniform(0, 10, n)
+    for x_np, x_t in zip(mm.batched(mp, mr), mm.batched(t(mp), t(mr))):
+        np.testing.assert_allclose(x_t.numpy(), x_np, rtol=1e-12)
+    e_np, e_t = tuple(np.eye(3)), tuple(torch.eye(3, dtype=torch.float64))
+    m, cz, ixx, izz = mm.batched(mp, mr)
+    i3 = np.c_[ixx, ixx, izz]
+    d = np.c_[np.zeros((n, 2)), cz - mm.evaluate(mm.prop0, mm.rcs0).com_body_m[2]]
+    args_np = (v * 1000, w * 500, w, rot, m, i3, d, 1207.0, np.array([4016.0, 4016.0, 120.0]), e_np, d * 0.01, d * 0.001)
+    out_np = compensated_wrench(*args_np)
+    out_t = compensated_wrench(*[t(x) if isinstance(x, np.ndarray) else x for x in args_np[:9]], e_t,
+                               t(d * 0.01), t(d * 0.001))
+    for x_t, x_np in zip(out_t, out_np):
+        np.testing.assert_allclose(x_t.numpy(), x_np, rtol=1e-9, atol=1e-9)

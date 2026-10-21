@@ -10,6 +10,7 @@ Components (all in body frame, axisymmetric about body Z):
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import numpy as np
@@ -77,3 +78,31 @@ class MassModel:
         com = sum(c[0] * c[1] for c in comps) / m_tot
         inertia = sum(_shift(c[0], c[1], c[2], com) for c in comps)
         return MassState(m_tot, com, inertia)
+
+    def batched(self, m_prop, m_rcs):
+        """Same result as `evaluate` for arrays/tensors (all components are on the body axis, so the CoM is
+        (0, 0, com_z) and the inertia about it is diag(i_xx, i_xx, i_zz)). Returns (mass, com_z, i_xx, i_zz).
+        Constants are Python floats so torch tensors on any device work."""
+        mp = self.vehicle.mass
+        r_t, z_b, z_r = float(mp.tank_radius_m), float(mp.tank_bottom_z_m), float(mp.rcs_gas_z_m)
+        rho = float(self.rho_prop)
+        m_p = m_prop.clip(min=0.0)
+        m_r = m_rcs.clip(min=0.0)
+        h = m_p / (rho * math.pi * r_t ** 2)
+        z_p = z_b + h / 2
+        m_s, i_sxx, i_szz = float(self.structure[0]), float(self.structure[2][0, 0]), float(self.structure[2][2, 2])
+        points = [(float(self.engine_base[0]), float(self.engine_base[1][2])),
+                  (float(self.nozzle[0]), float(self.nozzle[1][2]))]
+        m_fix = m_s + sum(m for m, _ in points)
+        mz_fix = sum(m * z for m, z in points)
+        mass = m_fix + m_p + m_r
+        com_z = (mz_fix + m_p * z_p + m_r * z_r) / mass
+        i_xx = (i_sxx + m_s * com_z ** 2 + sum(m * (z - com_z) ** 2 for m, z in points)
+                + m_p * (r_t * r_t / 4 + h * h / 12) + m_p * (z_p - com_z) ** 2 + m_r * (z_r - com_z) ** 2)
+        i_zz = i_szz + m_p * (r_t * r_t / 2)
+        return mass, com_z, i_xx, i_zz
+
+    def com_z_rates(self, m_prop, m_rcs, mdot_prop, mdot_rcs, tau: float = 0.05):
+        """d/dt and d2/dt2 of com_z for the current (constant) mass flows, by central differences of `batched`."""
+        c = [self.batched(m_prop - k * tau * mdot_prop, m_rcs - k * tau * mdot_rcs)[1] for k in (-1, 0, 1)]
+        return (c[2] - c[0]) / (2 * tau), (c[2] - 2 * c[1] + c[0]) / (tau * tau)

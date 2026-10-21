@@ -34,8 +34,10 @@ from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils.configclass import configclass
 
+from rocket_dt.dynamics.aero import AeroModel, aero_wrench
 from rocket_dt.dynamics.frames import G0
 from rocket_dt.dynamics.mass import MassModel
+from rocket_dt.dynamics.varmass import compensated_wrench
 from rocket_dt.evaluation.simulate import LANDING_LIMITS
 from rocket_dt.isaac_env.torch_models import TorchActuators, TorchPerfMap, gimbal_direction, isa_pressure
 from rocket_dt.isaac_env.layouts import layout_spec
@@ -185,6 +187,11 @@ class VtvlEnvCfg(DirectRLEnvCfg):
     noise_rate_rad_s: float = 0.0
     obs_delay_steps: int = 0
     lateral_r_m: tuple = (0.0, 8.0)  # start radius range; "lateral" scenario uses (25, 45)
+    # physics v1 (ADR-0011); defaults reproduce v0. aero: quasi-steady aero (configs/aero_v0.yaml) and the wind
+    # becomes a wind velocity at the reference height (the v0 force maps to the speed giving that force);
+    # variable_mass: true mass/CoM/inertia from the burned propellant via a compensating wrench on the fixed body
+    aero: bool = False
+    variable_mass: bool = False
 
     # episode logic
     terminate_at_touchdown: bool = True  # training: end at first contact; evaluation: False + settle
@@ -297,7 +304,18 @@ class VtvlEnv(DirectRLEnv):
         self.eng_pos_b = torch.tensor(self.spec.engine_pos_b, **f)
         self.eng_share = torch.tensor(self.spec.engine_share, **f)
         self.mass = float(ms.mass_kg)
-        self.com_b = torch.tensor(ms.com_body_m, **f)
+        self.com_b = torch.tensor(ms.com_body_m, **f)  # physics body CoM (full propellant, fixed)
+        self.mm = mm
+        self.i0 = torch.tensor(np.diag(ms.inertia_com_body), **f)
+        self.unit = tuple(torch.eye(3, **f))
+        self.com_true_b = self.com_b.expand(n, 3).clone()  # true CoM (= com_b unless variable_mass)
+        self.d_dot_b = torch.zeros(n, 3, **f)  # d/dt of (true CoM - body CoM), body frame
+        self.mass_true = torch.full((n,), self.mass, **f)
+        self.aero_k = None
+        if cfg.aero:
+            self.aero_model = AeroModel.load(REPO / "configs/aero_v0.yaml", self.veh.mass.structure_radius_m,
+                                             self.veh.mass.structure_length_m)
+            self.aero_k = self.aero_model.arrays(lambda a: torch.tensor(a, **f))
         self.pivot_b = torch.tensor(self.veh.layout.main_engine.gimbal_pivot_body_m, **f)
         feet = torch.tensor(self.veh.gear.foot_positions_body_m, **f).reshape(-1, 3)
         self.feet_b = feet
@@ -322,6 +340,7 @@ class VtvlEnv(DirectRLEnv):
         self.episode_results: list[dict] = []  # filled at reset (evaluation reads it)
         self._first_episode_done = torch.zeros(n, dtype=torch.bool, device=dev)
         self._episode_count = torch.zeros(n, dtype=torch.long, device=dev)
+        self._update_mass_props()
 
     # ---------------------------------------------------------------- scene
     def _setup_scene(self):
@@ -341,11 +360,17 @@ class VtvlEnv(DirectRLEnv):
 
     # ---------------------------------------------------------------- state helpers
     def _state(self):
+        """True CoM position/velocity (env frame), quaternion xyzw, body rates."""
         d = self.robot.data
         p = d.root_com_pos_w.torch - self.scene.env_origins
         q = d.root_link_quat_w.torch  # xyzw
         v = d.root_com_lin_vel_w.torch
         w_b = d.root_com_ang_vel_b.torch
+        if self.cfg.variable_mass:  # PhysX tracks the fixed full-propellant CoM; shift to the true CoM
+            rot = _rotmat_xyzw(q)
+            dd = self.com_true_b - self.com_b
+            p = p + (rot @ dd[..., None]).squeeze(-1)
+            v = v + (rot @ (torch.linalg.cross(w_b, dd) + self.d_dot_b)[..., None]).squeeze(-1)
         return p, q, v, w_b
 
     @staticmethod
@@ -353,7 +378,7 @@ class VtvlEnv(DirectRLEnv):
         return torch.acos(rot[:, 2, 2].clamp(-1.0, 1.0))
 
     def _foot_bottom_z(self, p, rot):
-        r = self.feet_b[None] - self.com_b[None, None]  # (1, 4, 3)
+        r = self.feet_b[None] - self.com_true_b[:, None]  # (n, 4, 3)
         return p[:, None, 2] + (rot[:, None] @ r[..., None]).squeeze(-1)[..., 2]
 
     # ---------------------------------------------------------------- actions
@@ -410,26 +435,57 @@ class VtvlEnv(DirectRLEnv):
         force_b = torch.cat([f_e[..., None] * dirs,
                              rcs_frac[..., None] * (self.act.fmax[:, None] * self.act.dir_b)[None]], dim=1)
         pos_b = torch.cat([self.eng_pos_b.expand(n, E, 3), self.act.pos_b.expand(n, -1, 3)], dim=1)
-        if self.cfg.gust_amp > 0:  # sinusoidal gust on the constant wind
+        if self.cfg.gust_amp > 0:  # sinusoidal gust on the constant wind (aero: speed x sqrt, so force x g)
             g = 1.0 + self.cfg.gust_amp * torch.sin(2 * math.pi * self.t / self.gust_period + self.gust_phase)
-            self.wind_w = self.wind_base * g[:, None]
-        F, tau = batched_wrench_torch(force_b, pos_b, self.com_b.expand(n, 3))
+            self.wind_w = self.wind_base * (g.clamp(min=0.0).sqrt() if self.cfg.aero else g)[:, None]
+        F, tau = batched_wrench_torch(force_b, pos_b, self.com_true_b)
         # last physics step, for telemetry/visualisation only
         self.last_f_main, self.last_valid, self.last_rcs_frac, self.last_pa = f_main, valid & main_on, rcs_frac, pa
         self.last_F_b, self.last_tau_b, self.last_gimbal = F[:, 0], tau[:, 0], gim
+        mdot_rcs = (rcs_frac * self.act.mdot_full).sum(1)
         comp = self.robot.permanent_wrench_composer
-        comp.set_forces_and_torques_index(forces=F, torques=tau, positions=None, is_global=False)
-        comp.add_forces_and_torques_index(forces=self.wind_w[:, None], positions=None, is_global=True)
+        if not (self.cfg.aero or self.cfg.variable_mass):  # v0 path, unchanged
+            comp.set_forces_and_torques_index(forces=F, torques=tau, positions=None, is_global=False)
+            comp.add_forces_and_torques_index(forces=self.wind_w[:, None], positions=None, is_global=True)
+        else:
+            f_b, t_b = F[:, 0], tau[:, 0]
+            wind_force_w = self.wind_w
+            if self.aero_k is not None:  # wind_w holds the reference-height wind velocity here
+                fa, ta = aero_wrench(self.aero_k, p[:, 2], rot, v, w_b, self.com_true_b, self.wind_w)
+                f_b, t_b, wind_force_w = f_b + fa, t_b + ta, torch.zeros_like(self.wind_w)
+                self.last_F_aero_b = fa
+            f_w = (rot @ f_b[..., None]).squeeze(-1) + wind_force_w
+            if self.cfg.variable_mass:
+                i_true = torch.stack([self.i_true[0], self.i_true[0], self.i_true[1]], 1)
+                cz_dot, cz_ddot = self.mm.com_z_rates(self.m_prop, self.m_rcs, mdot_main, mdot_rcs)
+                z3 = torch.zeros_like(cz_dot)
+                self.d_dot_b = torch.stack([z3, z3, cz_dot], 1)
+                f_w, t_b, _ = compensated_wrench(f_w, t_b, w_b, rot, self.mass_true, i_true,
+                                                 self.com_true_b - self.com_b, self.mass, self.i0, self.unit,
+                                                 self.d_dot_b, torch.stack([z3, z3, cz_ddot], 1))
+            f_body = (rot.transpose(1, 2) @ f_w[..., None]).squeeze(-1)
+            comp.set_forces_and_torques_index(forces=f_body[:, None], torques=t_b[:, None], positions=None,
+                                              is_global=False)
         self.m_prop = (self.m_prop - mdot_main * dt).clamp(min=0.0)
-        self.m_rcs = (self.m_rcs - (rcs_frac * self.act.mdot_full).sum(1) * dt).clamp(min=0.0)
+        self.m_rcs = (self.m_rcs - mdot_rcs * dt).clamp(min=0.0)
+        self._update_mass_props()
         self.fuel_used += mdot_main * dt
         self.t += dt
+
+    def _update_mass_props(self):
+        """True mass properties from the remaining propellant (variable_mass only)."""
+        if not self.cfg.variable_mass:
+            return
+        m, cz, ixx, izz = self.mm.batched(self.m_prop, self.m_rcs)
+        self.mass_true = m
+        self.i_true = (ixx, izz)
+        self.com_true_b = torch.stack([torch.zeros_like(cz), torch.zeros_like(cz), cz], 1)
 
     # ---------------------------------------------------------------- obs / reward / dones
     def _available_thrust_norm(self, p):
         fmax, _, _ = self.map.lookup(torch.full_like(p[:, 2], self.act.tmax), isa_pressure(p[:, 2].clamp(min=0.0)),
                                      self.engine_idx)
-        return fmax / (self.mass * G0)
+        return fmax / (self.mass_true * G0)
 
     def measured_state(self, advance: bool = False):
         """State as seen by the controller: true state, or (noise scenario) noisy and delayed by obs_delay_steps.
@@ -623,6 +679,9 @@ class VtvlEnv(DirectRLEnv):
         self.robot.write_root_link_pose_to_sim_index(root_pose=torch.cat([link, q], 1), env_ids=env_ids)
         w_w = (rot @ w_b[..., None]).squeeze(-1)
         self.robot.write_root_com_velocity_to_sim_index(root_velocity=torch.cat([vel, w_w], 1), env_ids=env_ids)
+        if self.cfg.aero:  # v0 wind force -> reference-height wind speed giving that force (ADR-0011)
+            fm = wind.norm(dim=1, keepdim=True)
+            wind = wind / fm.clamp(min=1e-9) * float(self.aero_model.wind_speed_for_force(1.0)) * fm.sqrt()
         self.wind_w[env_ids] = wind
         self.wind_base[env_ids] = wind
         self.gust_period[env_ids] = gper.float()
@@ -640,6 +699,8 @@ class VtvlEnv(DirectRLEnv):
         self._meas_prev = None
         self.m_prop[env_ids] = self.prop0
         self.m_rcs[env_ids] = self.rcs0
+        self.d_dot_b[env_ids] = 0.0  # reset velocity is written for the body CoM = true CoM at full load
+        self._update_mass_props()
         self.t[env_ids] = 0.0
         self.td[env_ids] = False
         for b in (self.td_t, self.td_vz, self.td_vh, self.td_tilt, self.td_pos, self.fuel_used, self.max_tilt):

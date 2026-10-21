@@ -30,6 +30,10 @@ class PDGains:
     kd_att: float = 3.0  # [1/s]
     max_tilt_rad: float = np.radians(12.0)
     max_horiz_acc: float = 2.0
+    # descent profile v_z,ref = -clip(vz_slope * h, vz_min, vz_max) (v0 values; re-tuned per scenario in ADR-0011)
+    vz_slope: float = 0.3
+    vz_min: float = 0.8
+    vz_max: float = 6.0
 
 
 @dataclass
@@ -72,7 +76,7 @@ class CascadedPD:
             a[2] = g.kp_pos * (target_w[2] - p[2]) - g.kd_pos * v[2]
         elif mode == "descent":
             h = max(p[2] - touchdown_com_z, 0.0)
-            vz_ref = -float(np.clip(0.3 * h, 0.8, 6.0))
+            vz_ref = -float(np.clip(g.vz_slope * h, g.vz_min, g.vz_max))
             a[2] = g.kp_vz * (vz_ref - v[2])
         else:
             raise ValueError(mode)

@@ -1,5 +1,36 @@
 # ai-rocket-digital-twin (Clean-v0)
 
+**Can a vehicle land on thrust control alone?** A VTVL (vertical take-off, vertical landing) digital twin
+in NVIDIA Isaac Lab 3.0 / Isaac Sim 6.0, inspired by the cold-gas thruster package announced for the Tesla Roadster.
+Simulation only.
+
+▶ Video: [`runs/ppo_win-isaac/videos/story_v2_scenarios_layouts.mp4`](runs/ppo_win-isaac/videos/story_v2_scenarios_layouts.mp4)
+(58 s, split-screen Isaac footage: training stages, scenarios, PD vs RL, four thruster layouts)
+
+## Results (`win-isaac`, 60 landings per case)
+
+| Scenario | Fixed-gain PD | RL trained on nominal | RL trained for the scenario |
+|---|---|---|---|
+| Nominal | 60 | 56–57 | – |
+| Strong gusty wind (≤ 1500 N) | 43 | 20 | 54 |
+| RCS thruster failure (unannounced) | 60 | 27 | 57 |
+| Sensor noise + 20 ms latency | 60 | 60 | 17 (fine-tune failed) |
+| Start 25–45 m from the pad | 5 | 28 | 52 |
+
+Thruster layouts (RL, nominal): gimballed engine + roll RCS 60, 3-engine differential throttle 60,
+4-engine differential throttle 60, fixed engine + cold-gas attitude control 59.
+
+- A well-tuned fixed-gain PD is as good or better inside its design envelope. RL wins only outside it,
+  and only when that condition is in training.
+- Limits: fixed vehicle mass (ADR-0009), 1D nozzle maps (CFD-checked for engines A and B), no aerodynamics,
+  no hardware. PD was not re-tuned per scenario; layouts b–d have no PD baseline. The flame in the videos is
+  an NVIDIA Flow visualisation of the 1D nozzle output, not a combustion simulation.
+
+Details: [`docs/decisions/ADR-0010-scenarios-layouts.md`](docs/decisions/ADR-0010-scenarios-layouts.md),
+[`PROJECT_LEDGER.md`](PROJECT_LEDGER.md).
+
+---
+
 연구용 가상 실험실: 엔진/노즐 형상별 추진 성능 해석(Track A)과 6-DoF 자세 제어·VTVL 이착륙(Track B)을
 버전이 붙은 `EnginePerformanceMap` + `VehicleConfig` + `ThrusterLayout` 인터페이스로만 연결한다.
 실물 엔진 제작·시동·추진제 취급은 범위 밖이다.
@@ -19,7 +50,16 @@ python -m rocket_dt cfd-case --engine configs/engines/conical_A.yaml --out runs/
 python scripts/run_cfd_batch.py --engines conical_A bell_B --levels 1 2 3   # OpenFOAM 필요
 ```
 
-`train`, `finetune`, `evaluate`, `visualize`는 Isaac Lab/GPU가 필요한 후속 단계이며 아직 구현되지 않았다(NOT_RUN).
+Isaac Lab 학습·평가 (Windows, GPU 필요, `win-isaac`):
+
+```bat
+isaaclab.bat -p scripts\ppo_train.py --run_name r0_base --num_envs 4096 --max_iterations 150
+isaaclab.bat -p scripts\ppo_train.py --run_name wind --scenario wind --resume_from runs\ppo_win-isaac\train\r3_guided\model_398.pt
+isaaclab.bat -p scripts\ppo_train.py --run_name coldgas --layout coldgas --max_iterations 600
+isaaclab.bat -p scripts\ppo_eval.py --checkpoint <model.pt> --scenario wind --layout gimbal_rcs [--video --enable_cameras]
+```
+
+전체 명령과 하이퍼파라미터는 [`HANDOFF.md`](HANDOFF.md), ADR-0009/0010.
 
 ## 구조
 
@@ -30,11 +70,11 @@ python scripts/run_cfd_batch.py --engines conical_A bell_B --levels 1 2 3   # Op
 | `src/rocket_dt/cfd/` | OpenFOAM wedge 케이스 생성기, polyMesh/필드 리더, 출구면 적분, QA, GCI, CFD 맵 |
 | `src/rocket_dt/dynamics/` | 좌표계 규약, 질량·CoM·관성 모델, r×F, RK4 6-DoF 참조 적분기 |
 | `src/rocket_dt/control/` | 제어 권한 검사, RCS 할당(bounded LS), cascaded PD 기준선 |
-| `src/rocket_dt/isaac_env/` | Isaac wrench bridge(테스트됨), DirectRLEnv 골격(NOT_RUN) |
+| `src/rocket_dt/isaac_env/` | Isaac wrench bridge, VTVL DirectRLEnv, 시나리오·엔진 배치, PD 정책, Flow 화염 |
 | `src/rocket_dt/evaluation/` | 시나리오 실행, 실험(E0/E1/E2/S3), 산출물(manifest/metrics) |
 | `configs/` | 엔진 A/B/C, 기체 v0, 시나리오 |
 | `docs/research/` | 단계 0 조사 보고서 5개 / `docs/sources.md` 통합 출처 |
-| `docs/decisions/` | ADR-0001 … 0008 |
+| `docs/decisions/` | ADR-0001 … 0010 |
 | `runs/` | 실행 산출물 (대용량 궤적·CFD 시간 디렉터리는 git 제외) |
 
 ## 규약 요약

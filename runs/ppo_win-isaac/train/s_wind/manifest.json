@@ -1,0 +1,153 @@
+{
+ "label": "win-isaac",
+ "argv": [
+  "scripts\\ppo_train.py",
+  "--run_name",
+  "s_wind",
+  "--scenario",
+  "wind",
+  "--max_iterations",
+  "300",
+  "--num_envs",
+  "4096",
+  "--shaping",
+  "guided",
+  "--phi_pos_m",
+  "2.0",
+  "--phi_tilt_rad",
+  "0.3",
+  "--rew_td_success",
+  "20",
+  "--resume_from",
+  "runs\\ppo_win-isaac\\train\\r3_guided\\model_398.pt"
+ ],
+ "software": {
+  "python": "3.12.13",
+  "torch": "2.10.0+cu128",
+  "rsl-rl-lib": "5.0.1",
+  "gymnasium": "1.2.1",
+  "warp-lang": "1.13.0",
+  "numpy": "2.3.1",
+  "isaaclab_repo_version": "3.0.0",
+  "isaacsim_version": "6.0.1-rc.7+release.42383.32955d8d.gl",
+  "isaaclab_git_describe": "v3.0.0-beta2.patch1-5-g418ca31b4",
+  "rocket_dt_commit": "e76daf6",
+  "gpu": "NVIDIA GeForce RTX 4070 Ti, 610.88, 12282 MiB"
+ },
+ "map_hash": "b337fd547e15ef5c",
+ "engine": "conical_A",
+ "map_source": "ideal1d",
+ "asset": {
+  "mass_kg": 1207.1859948358392,
+  "com_body_m": [
+   0.0,
+   0.0,
+   -0.2276140989647705
+  ],
+  "inertia_diag": [
+   4016.01741909126,
+   4016.01741909126,
+   320.0625
+  ],
+  "foot_radius_m": 0.15,
+  "propellant_kg": 450.0,
+  "rcs_gas_kg": 10.0
+ },
+ "layout": "gimbal_rcs",
+ "scenario": "wind",
+ "env_cfg": {
+  "decimation": 4,
+  "engine_mix": null,
+  "episode_length_s": 60.0,
+  "phi_pos_m": 2.0,
+  "phi_tilt_rad": 0.3,
+  "rew_action_rate": 0.01,
+  "rew_crash": -10.0,
+  "rew_fuel_per_throttle": 0.004,
+  "rew_shaping_scale": 2.0,
+  "rew_td_base": 5.0,
+  "rew_td_success": 20.0,
+  "rew_td_vz_margin": 0.0,
+  "rew_td_vz_target": 1.2,
+  "rew_timeout": -10.0,
+  "shaping": "guided",
+  "terminate_at_touchdown": true,
+  "throttle0": 0.7,
+  "touchdown_height_m": 0.02
+ },
+ "agent_cfg": {
+  "seed": 42,
+  "device": "cuda:0",
+  "num_steps_per_env": 32,
+  "max_iterations": 300,
+  "empirical_normalization": {},
+  "obs_groups": {
+   "actor": [
+    "policy"
+   ],
+   "critic": [
+    "policy"
+   ]
+  },
+  "clip_actions": null,
+  "check_for_nan": true,
+  "save_interval": 50,
+  "experiment_name": "vtvl_landing",
+  "run_name": "s_wind",
+  "logger": "tensorboard",
+  "neptune_project": "isaaclab",
+  "wandb_project": "isaaclab",
+  "resume": false,
+  "load_run": ".*",
+  "load_checkpoint": "model_.*.pt",
+  "class_name": "OnPolicyRunner",
+  "actor": {
+   "class_name": "MLPModel",
+   "hidden_dims": [
+    128,
+    128
+   ],
+   "activation": "elu",
+   "obs_normalization": true,
+   "distribution_cfg": {
+    "class_name": "GaussianDistribution",
+    "init_std": 0.5,
+    "std_type": "scalar"
+   }
+  },
+  "critic": {
+   "class_name": "MLPModel",
+   "hidden_dims": [
+    128,
+    128
+   ],
+   "activation": "elu",
+   "obs_normalization": true,
+   "distribution_cfg": null
+  },
+  "algorithm": {
+   "class_name": "PPO",
+   "num_learning_epochs": 5,
+   "num_mini_batches": 4,
+   "learning_rate": 0.0003,
+   "schedule": "adaptive",
+   "gamma": 0.995,
+   "lam": 0.95,
+   "entropy_coef": 0.005,
+   "desired_kl": 0.01,
+   "max_grad_norm": 1.0,
+   "optimizer": "adam",
+   "value_loss_coef": 1.0,
+   "use_clipped_value_loss": true,
+   "clip_param": 0.2,
+   "normalize_advantage_per_mini_batch": false,
+   "share_cnn_encoders": false,
+   "rnd_cfg": null,
+   "symmetry_cfg": null
+  },
+  "policy": {}
+ },
+ "resumed_from": "runs\\ppo_win-isaac\\train\\r3_guided\\model_398.pt",
+ "train_wall_s": 1849.2770822048187,
+ "torch_max_allocated_mib": 226.98486328125
+}

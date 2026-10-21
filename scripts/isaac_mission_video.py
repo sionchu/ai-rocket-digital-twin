@@ -24,6 +24,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--controller", choices=["ppo", "pd"], required=True)
 parser.add_argument("--checkpoint", default=None)
 parser.add_argument("--engine", default="conical_A")
+parser.add_argument("--scenario", default="nominal", choices=["nominal", "wind", "rcs_fail", "noise", "lateral"])
+parser.add_argument("--layout", default="gimbal_rcs", choices=["gimbal_rcs", "tri_diff", "quad_diff", "coldgas"])
 parser.add_argument("--seed", type=int, default=1003)
 parser.add_argument("--name", required=True)
 parser.add_argument("--cam_dist", type=float, default=24.0)
@@ -108,14 +110,17 @@ def plume_shape(thr_frac: float, pe_pa: float) -> tuple[float, float]:
 
 
 def main():
-    base = Scenario(**yaml.safe_load(open(REPO / "configs/scenarios/landing.yaml")))
-    sc = randomized_scenarios(base, 1, args.seed)[0]
-    keys = ("com_position_w", "velocity_w", "tilt_axis", "tilt_rad", "omega_b", "disturbance_force_w")
+    from rocket_dt.isaac_env.layouts import layout_spec
+    from rocket_dt.isaac_env.scenarios import eval_scenarios
+    spec = layout_spec(args.layout, load_vehicle(REPO / "configs/vehicle_v0.yaml"))
+    torch.manual_seed(args.seed)  # same noise stream as scripts/ppo_eval.py --seed0 <seed> for the first env
     cfg = VtvlEnvCfg()
     cfg.engine = args.engine
+    cfg.layout, cfg.scenario = args.layout, args.scenario
+    cfg.apply_scenario()
     cfg.__post_init__()
     cfg.terminate_at_touchdown = False
-    cfg.eval_scenarios = [{k: asdict(sc)[k] for k in keys}]
+    cfg.eval_scenarios = eval_scenarios(args.scenario, 1, args.seed, n_rcs=len(spec.rcs))
     if args.look == "story":
         cfg.sky_color, cfg.sky_intensity, cfg.sun_intensity = (0.30, 0.40, 0.56), 1200.0, 2500.0
     cfg.scene.num_envs = 1
@@ -137,10 +142,12 @@ def main():
         policy = PDPolicy(env, args.engine, "ideal1d")
     rcs_ids = [t.id for t in load_vehicle(REPO / "configs/vehicle_v0.yaml").layout.rcs]
     for rid in args.rcs_failed:
-        env.act.failed[rcs_ids.index(rid)] = True
+        env.act.failed_cfg[rcs_ids.index(rid)] = True  # persists through resets
+        env.act.failed[:, rcs_ids.index(rid)] = True
         if args.controller == "pd":
             policy.failed[rcs_ids.index(rid)] = True  # fault known to the allocator (simulate.py default)
-    failed = env.act.failed.cpu().numpy().astype(bool)
+    eng_pos = env.eng_pos_b.cpu().numpy().astype(float)
+    eng_share = env.eng_share.cpu().numpy().astype(float)
     eng_design = load_engine(REPO / f"configs/engines/{args.engine}.yaml")
     from rocket_dt.propulsion import nozzle1d
     vis = VisualizationMarkers(markers_cfg())
@@ -188,7 +195,8 @@ def main():
     tel = {"label": "win-isaac", "plume": args.plume, "flow_tuning": flow.tuning if flow else None, "controller": args.controller, "checkpoint": args.checkpoint, "engine": args.engine,
            "seed": args.seed, "scenario": cfg.eval_scenarios[0], "map_hash": env.map_hash, "control_dt": env.step_dt,
            "frame_every": args.frame_every, "arrow_scale_m_per_n": ARROW_SCALE, "thrust_ref_n_sl_full": f_ref,
-           "mass_kg_fixed": env.mass, "td_com_z": env.td_com_z, "rcs_failed": [r for r, f in zip(rcs_ids, failed) if f],
+           "mass_kg_fixed": env.mass, "td_com_z": env.td_com_z, "layout": args.layout, "scenario_name": args.scenario,
+           "rcs_failed": [], "rcs_ids": [t.id for t in env.spec.rcs],
            "plume_mapping": "length = 0.6 + 6.0 * F/F_ref [m]; spread = clip(sqrt(Pe/Pa), 0.6, 1.8); Pe from "
                             "rocket_dt nozzle1d at logged throttle and ISA Pa. Visual representation of the 1D "
                             "nozzle output, not a combustion simulation.",
@@ -206,6 +214,10 @@ def main():
         p, q, v, w = (t[0].detach().cpu().numpy().astype(float) for t in env._state())
         rot = _rotmat_xyzw(torch.tensor(q[None], dtype=torch.float32))[0].numpy().astype(float)
         f_main = float(env.last_f_main[0])
+        f_e = env.last_f_e[0].cpu().numpy().astype(float)
+        failed = env.act.failed[0].cpu().numpy().astype(bool)  # per-episode (rcs_fail scenario) + --rcs_failed
+        if not tel["rcs_failed"] and failed.any():
+            tel["rcs_failed"] = [env.spec.rcs[i].id for i in np.flatnonzero(failed)]
         gim = env.last_gimbal[0].cpu().numpy().astype(float)
         frac = env.last_rcs_frac[0].cpu().numpy().astype(float)
         F_b = env.last_F_b[0].cpu().numpy().astype(float)
@@ -220,12 +232,15 @@ def main():
                 "map_valid": bool(env.last_valid[0]), "pa": float(env.last_pa[0]),
                 "m_prop": float(env.m_prop[0]),
                 "thrust_w": thrust_w.tolist(), "wind_w": wind.tolist(), "net_w": net_w.tolist(),
-                "touchdown": bool(env.td[0]), "frame": None}
+                "touchdown": bool(env.td[0]), "f_e_n": f_e.tolist(), "frame": None}
         # ---- markers (world frame; env origin is the world origin with num_envs = 1)
         com_w = p
-        d_b = np.array([math.cos(gim[0]) * math.sin(gim[1]), -math.sin(gim[0]), math.cos(gim[0]) * math.cos(gim[1])])
-        exit_b = pivot + d_b * (exit_z - pivot[2])
-        exit_w = com_w + rot @ (exit_b - com_b)
+        if env.spec.gimbal:
+            d_b = np.array([math.cos(gim[0]) * math.sin(gim[1]), -math.sin(gim[0]), math.cos(gim[0]) * math.cos(gim[1])])
+        else:
+            d_b = np.array([0.0, 0.0, 1.0])
+        exits_w = [com_w + rot @ (ep + d_b * (exit_z - pivot[2]) * math.sqrt(sh) - com_b) for ep, sh in zip(eng_pos, eng_share)]
+        exit_w = exits_w[0]
         d_w = rot @ d_b
         thr_frac = max(f_main, 0.0) / f_ref
         pt = nozzle1d.evaluate(eng_design, max(step["throttle"], eng_design.throttle_min), step["pa"])
@@ -237,14 +252,18 @@ def main():
         trans, quats, scales, ids = [], [], [], []
         if flow is not None:
             flow.update(exit_w, d_w, L0 if f_main > 1.0 else 0.0, spread, thr_frac, step["engine_on"])
-        for name, lf, wf in (("plume_core", 0.65, (0.7 + 0.5 * thr_frac) * spread),
-                             ("plume_outer", 1.0, (0.8 + 0.6 * thr_frac) * spread)):
-            h = L * lf if args.plume != "flow" else 1e-3
-            trans.append(exit_w - d_w * h / 2)
-            quats.append(quat_z_to(d_w))
-            scales.append([wf, wf, h])
-            ids.append(MARKER_IDS[name])
-        for i in range(4):
+        for e_i, (ex_w, sh) in enumerate(zip(exits_w, eng_share)):  # one plume per engine, sized by its own thrust
+            tf = max(f_e[e_i], 0.0) / (f_ref * sh)
+            Le, _ = plume_shape(tf, pe_pa)
+            Le = Le * math.sqrt(sh) * (1.0 + 0.04 * rng.standard_normal()) if f_e[e_i] > 1.0 else 1e-3
+            for name, lf, wf in (("plume_core", 0.65, (0.7 + 0.5 * tf) * spread * math.sqrt(sh)),
+                                 ("plume_outer", 1.0, (0.8 + 0.6 * tf) * spread * math.sqrt(sh))):
+                h = Le * lf if args.plume != "flow" else 1e-3
+                trans.append(ex_w - d_w * h / 2)
+                quats.append(quat_z_to(d_w))
+                scales.append([wf, wf, h])
+                ids.append(MARKER_IDS[name])
+        for i in range(env.act.k):
             h = 0.9 if (frac[i] > 0 and not failed[i]) else 1e-3  # only thrusters that are actually firing
             fd = rot @ rcs_dir[i]
             pos = com_w + rot @ (rcs_pos[i] - com_b)

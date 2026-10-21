@@ -399,6 +399,7 @@ class VtvlEnv(DirectRLEnv):
         main_on = self.act.engine_on & (self.m_prop > 0)
         f_e = torch.where(main_on[:, None], f_e, torch.zeros_like(f_e))
         f_main = f_e.sum(1)
+        self.last_f_e = f_e  # per-engine thrust (telemetry / visualisation)
         mdot_main = torch.where(main_on, md_e.sum(1), torch.zeros_like(f_main))
         self.invalid_steps += (main_on & ~valid).long()
         rcs_frac = torch.where((self.m_rcs > 0)[:, None], frac, torch.zeros_like(frac))

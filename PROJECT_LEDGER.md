@@ -44,6 +44,9 @@
 | Isaac 임무 영상 (`win-isaac`) | 결과 | 플룸(실제 추력·짐벌 반영), RCS 분사, 힘 화살표, 추적 카메라, 웹캐스트형 HUD(엔진 링, 원격측정, CFD Mach, Pe/Pa, 추력 맵 작동점, 한계 게이지, 판정). 화면의 모든 숫자는 Isaac 기록에서 나온다. `videos/pd_vs_ppo_m1_conical_A_s1004.mp4`, `videos/ppo_m1_bell_C_s1004_separation.mp4` |
 | Isaac Flow 화염 영상 (`win-isaac`) | 결과 | NVIDIA Flow(omni.flowusd 110.0.3)가 헤드리스 RTX 캡처에 잡힌다. 화염은 1D 노즐 출력(추력→길이, Pe/Pa→퍼짐)의 시각 표현이며 연소 해석이 아니다. 하강 중인 차량에서 점·구 방출기는 화염이 노즐 위로 남아 박스 방출기로 바꿨다. 캡처 확인(화염색 픽셀이 있는 프레임 비율): conical_A 0.97–0.98, bell_C 0.69 (과팽창 Pe/Pa ≈ 0.42라 가장 가늘다). 엔진 근접 카메라, 고장 RCS 빨간 표시. `runs/ppo_win-isaac/videos/flow_*.mp4` + `.manifest.json` |
 | 스토리 영상 (`win-isaac`) | 결과 | LinkedIn용 66 s, 6.4 MB, 영상 위주. 순서: 제목(Isaac 화면 위) → 학습 단계별 16 env 격자(같은 시드: iteration 0 0/16 전도, 50 0/16, 149 0/16 착지했으나 한계 초과, 398 16/16, 697 16/16) → bell_C로 엔진 교체(단일 엔진 정책 4/16, 혼합 엔진 정책 16/16) → 한 정책, 엔진 3종(노즐을 각 엔진 윤곽으로 4배 스케일 메시화, 근접 카메라) → PD vs PPO → 엔진별 착륙 수 → 노즐 형상 애니메이션. 끝난 env는 마지막 자세로 고정(시각만). `runs/ppo_win-isaac/videos/story_vtvl_isaac.mp4`, `scripts/render_story.py` |
+| 시나리오별 학습 (`win-isaac`) | **PARTIAL** | 60회 착륙 수 PD / RL 기준 / RL 시나리오 학습: 강풍 43/20/54, RCS 고장 60/27/57, 센서 잡음 60/60/17(잡음 학습 실패), 원거리 접근 5/28/52. RL은 고정 이득 PD의 설계 범위 밖(강풍, 원거리)에서 앞선다. PD 재조정 비교 NOT_RUN. ADR-0010 |
+| 엔진 배치 (`win-isaac`) | **PASS** (학습 가능) | 같은 기체에서 RL이 착륙 학습: 3엔진 차동 스로틀 60/60, 4엔진 60/60, 고정 주엔진 + 냉가스 자세 59/60. PD 기준선 없음(NOT_RUN). ADR-0010 |
+| 분할 화면 영상 (`win-isaac`) | 결과 | 58.6 s, 8.8 MB: 학습 단계 → 시나리오 4분할 → 강풍·원거리 PD vs RL → 엔진 배치 4분할 → 결과 → 배치 도식. `runs/ppo_win-isaac/videos/story_v2_scenarios_layouts.mp4` |
 | Isaac 질량 갱신 | 결과 | `set_masses_index`는 읽기값만 바뀌고 GPU 동역학 불변(측정 a_z 6.76 vs 기대 7.94 m/s²). env v0는 질량 고정. 착지 때 7.1% 무거움(ADR-0009) |
 
 ## 고정 버전

@@ -32,3 +32,7 @@ runs/ppo_win-isaac/grid/*/raw.mp4
 runs/ppo_win-isaac/grid/test_*/
 runs/ppo_win-isaac/grid*.log
 runs/ppo_win-isaac/mission[23]_*.log
+runs/ppo_win-isaac/eval2.*.log
+runs/ppo_win-isaac/eval2/*/*/*.log
+runs/ppo_win-isaac/regress*
+runs/ppo_win-isaac/train/*/*_eval_*.log

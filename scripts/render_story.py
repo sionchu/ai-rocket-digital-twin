@@ -104,6 +104,11 @@ class Mission:
         self.reader2 = imageio.get_reader(d / "raw_engine.mp4") if (d / "raw_engine.mp4").exists() else None
         self.fsteps = [s for s in self.tel["steps"] if s["frame"] is not None]
         self.ep = self.tel["episode"]
+        # skip RTX warm-up frames (black) at the start of a capture
+        k = 0
+        while k < min(40, len(self.fsteps) - 1) and self.reader.get_data(self.fsteps[k]["frame"]).mean() < 8:
+            k += 1
+        self.fsteps = self.fsteps[k:]
 
     def at(self, i):
         s = self.fsteps[min(i, len(self.fsteps) - 1)]
@@ -297,10 +302,111 @@ def numbers(n, grid="g_m1_C", speed=2):
     return out
 
 
+def quad(names, labs, text, speed=2, hold=2.0, notes=None):
+    """2x2 split screen of single-vehicle Isaac renders (one trained policy or controller per pane)."""
+    ms = [Mission(n) for n in names]
+    n = max(len(m) for m in ms) // speed + int(FPS * hold)
+    out = []
+    rects = [(0, 0.5, 0.5, 0.5), (0.5, 0.5, 0.5, 0.5), (0, 0, 0.5, 0.5), (0.5, 0, 0.5, 0.5)]
+    for i in range(n):
+        fig = new_fig()
+        for m, lab, (x0, y0, w, h), note in zip(ms, labs, rects, notes or [None] * 4):
+            img, s_ = m.at(i * speed)
+            video(fig, img, rect=(x0, y0, w, h))
+            fig.text(x0 + 0.012, y0 + h - 0.05, lab, color=FG, fontsize=17, weight="light",
+                     bbox=dict(facecolor="#000000", alpha=0.4, edgecolor="none", boxstyle="round,pad=0.3"))
+            if note:
+                fig.text(x0 + w - 0.012, y0 + h - 0.05, note, color=DIM, fontsize=13, ha="right",
+                         bbox=dict(facecolor="#000000", alpha=0.4, edgecolor="none", boxstyle="round,pad=0.3"))
+            if i * speed >= len(m) - 1:
+                ok = m.ep.get("success")
+                fig.text(x0 + w / 2, y0 + h * 0.5, "LANDED" if ok else ("TIPPED OVER" if "tip" in m.ep.get(
+                    "termination_reason", "") else "MISSED"), color=OKC if ok else BADC, fontsize=26, ha="center",
+                         weight="bold")
+        fig.add_artist(plt.Line2D([0.5, 0.5], [0, 1], color=BG, lw=6))
+        fig.add_artist(plt.Line2D([0, 1], [0.5, 0.5], color=BG, lw=6))
+        fig.text(0.5, 0.5, text, color=FG, fontsize=18, ha="center", va="center", weight="light",
+                 bbox=dict(facecolor=BG, alpha=0.9, edgecolor="none", boxstyle="round,pad=0.5"))
+        out.append(grab(fig))
+    return out
+
+
+def layout_diagrams(n):
+    """Closing card: top-down engine placement of the four layouts (from layouts.py), no footage."""
+    from rocket_dt.isaac_env.layouts import layout_spec
+    from rocket_dt.schemas import load_vehicle
+    veh = load_vehicle(REPO / "configs/vehicle_v0.yaml")
+    names = [("gimbal_rcs", "gimbaled engine + RCS"), ("tri_diff", "3 engines, differential throttle"),
+             ("quad_diff", "4 engines, differential throttle"), ("coldgas", "fixed engine + cold-gas thrusters")]
+    specs = [layout_spec(k, veh) for k, _ in names]
+    out = []
+    for i in range(n):
+        fig = new_fig()
+        a = min(1.0, (i + 1) / 12)
+        for j, ((k, lab), sp) in enumerate(zip(names, specs)):
+            ax = fig.add_axes([0.04 + j * 0.24, 0.25, 0.2, 0.45], facecolor=BG)
+            ax.add_patch(plt.Circle((0, 0), 0.6, fill=False, ec=FG, lw=1.5, alpha=a))
+            for e, sh in zip(sp.engine_pos_b, sp.engine_share):
+                ax.add_patch(plt.Circle((e[0], e[1]), 0.1 + 0.25 * np.sqrt(sh) * 0.6, color=ACC, alpha=a))
+                if sp.gimbal:
+                    ax.add_patch(plt.Circle((e[0], e[1]), 0.36, fill=False, ec=ACC, ls="--", lw=1, alpha=a))
+            for t in sp.rcs:
+                x, y = t.position_body_m[0], t.position_body_m[1]
+                dx, dy = t.force_direction_body[0], t.force_direction_body[1]
+                col = BADC if t.id.startswith("cg_") else FG
+                ax.arrow(x, y, -0.18 * dx, -0.18 * dy, width=0.015, color=col, alpha=a, length_includes_head=True)
+            ax.set_xlim(-0.9, 0.9), ax.set_ylim(-0.9, 0.9), ax.set_aspect("equal"), ax.axis("off")
+            fig.text(0.14 + j * 0.24, 0.2, lab, color=FG, fontsize=15, ha="center", weight="light", alpha=a)
+        label(fig, "Four engine layouts, one airframe", size=26)
+        fig.text(0.5, 0.08, "orange = main engines (dashed = gimbal)  ·  white = roll RCS  ·  red = cold-gas pitch/yaw",
+                 color=DIM, fontsize=12, ha="center")
+        out.append(grab(fig))
+    return out
+
+
+def results2(n, grid="g_m1_A", speed=2):
+    def k(path):
+        return sum(json.loads(Path(f).read_text())["summary"]["n_success"]
+                   for f in sorted((RUNS / "eval2" / path).glob("*_*/eval_*.json")))
+    def k2(path, ctl):
+        return sum(json.loads(f.read_text())["summary"]["n_success"]
+                   for f in sorted((RUNS / "eval2" / path).glob(f"{ctl}_*/eval_*.json")))
+    rows = [("strong wind", "wind"), ("RCS failure", "rcs_fail"), ("sensor noise", "noise"), ("lateral approach", "lateral")]
+    data = [(lab, k2(d, "pd"), k2(d, "r3"), k2(d, "own")) for lab, d in rows]
+    lay = [(lab, k2(f"layout_{d}", "own")) for lab, d in (("3 engines", "tri_diff"), ("4 engines", "quad_diff"),
+                                                          ("cold-gas", "coldgas"))]
+    g = Grid(grid)
+    out = []
+    for i in range(n):
+        fig = new_fig()
+        img, _ = g.at(g.n - n * speed + i * speed)
+        video(fig, (img * 0.3).astype(np.uint8))
+        fig.text(0.5, 0.88, "landings out of 60", color=DIM, fontsize=18, ha="center")
+        xs = [0.42, 0.57, 0.72]
+        for x, h in zip(xs, ("PD", "RL nominal", "RL trained here")):
+            fig.text(x, 0.8, h, color=DIM, fontsize=16, ha="center")
+        for j, (lab, pd, r3, own) in enumerate(data):
+            y = 0.7 - j * 0.09
+            fig.text(0.12, y, lab, color=FG, fontsize=22, weight="light", va="center")
+            best = max(pd, r3, own)
+            for x, v in zip(xs, (pd, r3, own)):
+                fig.text(x, y, f"{v}", color=OKC if v == best else (ACC if v >= 40 else BADC), fontsize=36,
+                         ha="center", va="center", weight="light")
+        fig.text(0.12, 0.27, "layouts (RL, nominal)", color=DIM, fontsize=16)
+        for j, (lab, v) in enumerate(lay):
+            fig.text(0.42 + j * 0.15, 0.27, f"{lab}  {v}", color=OKC if v >= 54 else ACC, fontsize=20, ha="center",
+                     weight="light")
+        fig.text(0.5, 0.12, "RL beats fixed-gain PD outside PD's tuning (strong wind, far offsets) when trained for it;"
+                            "  noise-trained policy failed (17)", color=FG, fontsize=15, ha="center")
+        out.append(grab(fig))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="story_vtvl_isaac.mp4")
     ap.add_argument("--only", nargs="*", default=None)
+    ap.add_argument("--cut", default="v1", choices=["v1", "v2"])
     a = ap.parse_args()
     out = RUNS / "videos" / a.out
     chapters = {
@@ -317,6 +423,24 @@ def main():
         "numbers": lambda: numbers(FPS * 5),
         "nozzles": lambda: nozzles(FPS * 5),  # closing shot after the Isaac footage
     }
+    if a.cut == "v2":  # split-screen cut: scenario-specific training and engine layouts
+        chapters = {
+            "title": lambda: title(FPS * 4),
+            "training": lambda: training([("g_r0_it0", 0, "Iteration 0"), ("g_r0_it149", 149, "Iteration 149"),
+                                          ("g_m1_A", 697, "Iteration 697")], lineage(), seconds_each=4.0),
+            "scenarios": lambda: quad(["sc_wind_rl", "sc_rcs_rl", "sc_noise_nom", "sc_lat_rl"],
+                                      ["strong wind", "RCS thruster failed", "sensor noise + latency", "far lateral start"],
+                                      "one policy trained per scenario", notes=["RL trained here", "RL trained here",
+                                                                                "nominal RL", "RL trained here"]),
+            "rl_vs_pd": lambda: quad(["sc_wind_pd", "sc_wind_rl", "sc_lat_pd", "sc_lat_rl"],
+                                     ["strong wind · PD", "strong wind · RL", "far lateral start · PD",
+                                      "far lateral start · RL"], "where learning beats fixed-gain control"),
+            "layouts": lambda: quad(["ly_a", "ly_b", "ly_c", "ly_d"],
+                                    ["gimbaled engine", "3 engines", "4 engines", "cold-gas thrusters"],
+                                    "four engine layouts, each trained in Isaac", speed=3),
+            "results": lambda: results2(FPS * 6),
+            "diagrams": lambda: layout_diagrams(FPS * 5),
+        }
     w = imageio.get_writer(out, fps=FPS, codec="libx264", quality=5, macro_block_size=8)
     total = 0
     for k in a.only or list(chapters):

@@ -49,4 +49,5 @@ python3 scripts/run_cfd_batch.py --engines conical_A bell_B --levels 1 2 3 --job
 # isaaclab.bat -p scripts\ppo_eval.py --checkpoint runs\ppo_win-isaac\train\r3_guided\model_398.pt [--engine bell_B] [--seed0 2000]
 # isaaclab.bat -p scripts\ppo_eval.py --checkpoint ... --video --video_episodes 3 --video_name late --enable_cameras
 python scripts/run_cfd_experiments.py          # CFD 맵 vs 1D 맵 비행 비교
+python -m pip install -e ".[video]" && python scripts/render_replay.py   # runs/video/*.mp4 (cloud-v1912 리플레이, Isaac 아님)
 ```

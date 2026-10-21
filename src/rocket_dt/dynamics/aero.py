@@ -102,7 +102,7 @@ def aero_wrench(k: dict, p_z, rot, v_w, omega_b, com_b, wind_ref_w):
     rho = isa_density(p_z.clip(min=0.0))
     f_k = (-0.5 * k["cdc"]) * rho[:, None, None] * k["area"][None, :, None] * s_n[..., None] * u_n
     u_ax = u[..., 2].mean(-1)
-    cd_ax = k["cd_tail"] + (k["cd_nose"] - k["cd_tail"]) * (u_ax > 0)
+    cd_ax = k["cd_tail"] + (k["cd_nose"] - k["cd_tail"]) * ((u_ax > 0) + 0.0 * u_ax)  # keep u_ax dtype (torch bool*float -> float32)
     f_ax = -0.5 * rho * cd_ax * k["a_base"] * abs(u_ax) * u_ax
     force = f_k.sum(1) + f_ax[:, None] * k["ez"]
     torque = _cross(r, f_k, k).sum(1)

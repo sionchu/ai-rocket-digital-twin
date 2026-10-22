@@ -30,6 +30,8 @@ parser.add_argument("--seconds", type=float, default=24.0)
 parser.add_argument("--spacing", type=float, default=16.0)
 parser.add_argument("--cam", nargs=4, type=float, default=[78.0, -78.0, 42.0, 30.0], help="eye dx dy dz, target z")
 parser.add_argument("--look", choices=["default", "story"], default="default")
+parser.add_argument("--physics", default="v0", choices=["v0", "v1"], help="v1 = aero + variable mass + CFD map (ADR-0011)")
+parser.add_argument("--visual", default="v0", choices=["v0", "v1"], help="v1 = assets/vtvl_v1 vehicle, pad and sky")
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 app = AppLauncher(args).app
@@ -69,6 +71,9 @@ def main():
     keys = ("com_position_w", "velocity_w", "tilt_axis", "tilt_rad", "omega_b", "disturbance_force_w")
     cfg = VtvlEnvCfg()
     cfg.engine = args.engine
+    cfg.map_source = "cfd" if args.physics == "v1" else "ideal1d"
+    cfg.aero = cfg.variable_mass = args.physics == "v1"
+    cfg.visual = args.visual
     cfg.__post_init__()
     cfg.terminate_at_touchdown = False
     cfg.eval_scenarios = [{k: asdict(s)[k] for k in keys} for s in scs]
@@ -86,7 +91,7 @@ def main():
         runner.load(str(ck))
         policy = runner.get_inference_policy(device=env.device)
     else:
-        policy = PDPolicy(env, args.engine, "ideal1d")
+        policy = PDPolicy(env, args.engine, cfg.map_source)
 
     def mat(rgb, emis, op=1.0):
         return sim_utils.PreviewSurfaceCfg(diffuse_color=rgb, emissive_color=emis, opacity=op, roughness=0.9)

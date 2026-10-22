@@ -168,7 +168,8 @@ def counters(fig, st, n, x=0.965):
 
 
 # ----------------------------------------------------------------------------- chapters
-def title(n, grid="g_m1_A", speed=4):
+def title(n, grid="g_m1_A", speed=4, head="Thrust-only rocket landing in Isaac Sim",
+          sub="inspired by the cold-gas thruster package announced for the Tesla Roadster"):
     """Title over Isaac footage (16 envs landing), no black card."""
     g = Grid(grid)
     out = []
@@ -177,10 +178,8 @@ def title(n, grid="g_m1_A", speed=4):
         img, _ = g.at(g.n // 3 + i * speed)
         video(fig, (img * 0.55).astype(np.uint8))
         a = min(1.0, i / 10)
-        fig.text(0.5, 0.54, "Thrust-only rocket landing in Isaac Sim", color=FG, fontsize=40, ha="center",
-                 weight="light", alpha=a)
-        fig.text(0.5, 0.45, "inspired by the cold-gas thruster package announced for the Tesla Roadster",
-                 color=DIM, fontsize=17, ha="center", alpha=a)
+        fig.text(0.5, 0.54, head, color=FG, fontsize=40, ha="center", weight="light", alpha=a)
+        fig.text(0.5, 0.45, sub, color=DIM, fontsize=17, ha="center", alpha=a)
         out.append(grab(fig))
     return out
 
@@ -402,11 +401,83 @@ def results2(n, grid="g_m1_A", speed=2):
     return out
 
 
+def results_v1(n, grid="g_v1_nom", speed=2):
+    """Physics v1 landings out of 60 (runs/ppo_win-isaac/eval_v1/summary_v1.json) with the v0 number beside it."""
+    s = json.loads((RUNS / "eval_v1/summary_v1.json").read_text())
+    v0 = {"wind": (43, 20, 54), "rcs_fail": (60, 27, 57), "noise": (60, 60, 17), "lateral": (5, 28, 52)}
+    rows = [("strong wind", "wind"), ("RCS failure", "rcs_fail"), ("sensor noise", "noise"),
+            ("lateral approach", "lateral")]
+
+    def k(sc, c):
+        r = s[sc].get(c)
+        return None if r is None else r["success"]
+    data = [(lab, [k(sc, "pd"), k(sc, "pd_tuned"), k(sc, "rl_nominal"), k(sc, "rl_scenario")], v0[sc])
+            for lab, sc in rows]
+    lay = [(lab, s["layouts"][d]["success"], v) for lab, d, v in (("3 engines", "tri_diff", 60),
+                                                                  ("4 engines", "quad_diff", 60),
+                                                                  ("cold-gas", "coldgas", 59))]
+    g = Grid(grid)
+    out = []
+    for i in range(n):
+        fig = new_fig()
+        img, _ = g.at(g.n - n * speed + i * speed)
+        video(fig, (img * 0.3).astype(np.uint8))
+        fig.text(0.5, 0.9, "physics v1: landings out of 60  (v0 in grey)", color=DIM, fontsize=18, ha="center")
+        xs = [0.38, 0.5, 0.62, 0.76]
+        for x, h in zip(xs, ("PD", "PD re-tuned", "RL nominal", "RL trained here")):
+            fig.text(x, 0.81, h, color=DIM, fontsize=15, ha="center")
+        for j, (lab, vals, old) in enumerate(data):
+            y = 0.71 - j * 0.09
+            fig.text(0.08, y, lab, color=FG, fontsize=22, weight="light", va="center")
+            best = max(v for v in vals if v is not None)
+            olds = (old[0], None, old[1], old[2])
+            for x, v, o in zip(xs, vals, olds):
+                fig.text(x, y, "-" if v is None else f"{v}", color=OKC if v == best else (ACC if (v or 0) >= 40 else BADC),
+                         fontsize=34, ha="center", va="center", weight="light")
+                if o is not None:
+                    fig.text(x + 0.033, y - 0.012, f"{o}", color=DIM, fontsize=13, ha="left", va="center")
+        fig.text(0.08, 0.28, "layouts (RL, nominal)", color=DIM, fontsize=16)
+        for j, (lab, v, o) in enumerate(lay):
+            fig.text(0.42 + j * 0.17, 0.28, f"{lab}  {v}", color=OKC if v >= 54 else (ACC if v >= 40 else BADC),
+                     fontsize=20, ha="center", weight="light")
+            fig.text(0.42 + j * 0.17, 0.245, f"v0 {o}", color=DIM, fontsize=12, ha="center")
+        fig.text(0.5, 0.13, "With aerodynamics, burning propellant and a CFD thrust map, the scenario-trained RL policy "
+                            "still wins only in strong wind;", color=FG, fontsize=15, ha="center")
+        fig.text(0.5, 0.095, "a re-tuned PD lands every far-lateral start. Fine-tunes for RCS failure, noise and the "
+                             "three layouts fell short at the v0 iteration budget.", color=FG, fontsize=15, ha="center")
+        fig.text(0.5, 0.04, "seeds 1000-1029 + 2000-2029  ·  Isaac Lab 3.0 / Isaac Sim 6.0.1  ·  win-isaac",
+                 color=DIM, fontsize=11, ha="center")
+        out.append(grab(fig))
+    return out
+
+
+def physics_card(n, grid="g_v1_nom", speed=2):
+    """What changed between v0 and v1 (ADR-0011), over dimmed v1 footage."""
+    g = Grid(grid)
+    rows = [("aerodynamics", "crossflow strip theory, wind profile, rate damping"),
+            ("variable mass", "propellant burn moves mass, CoM and inertia (compensating wrench)"),
+            ("thrust map", "OpenFOAM CFD map for the conical engine instead of 1D nozzle theory"),
+            ("PD baseline", "gains re-tuned per scenario on the reference integrator")]
+    out = []
+    for i in range(n):
+        fig = new_fig()
+        img, _ = g.at(g.n // 2 + i * speed)
+        video(fig, (img * 0.3).astype(np.uint8))
+        a = min(1.0, i / 10)
+        fig.text(0.5, 0.78, "Physics v1", color=FG, fontsize=36, ha="center", weight="light", alpha=a)
+        for j, (k, v) in enumerate(rows):
+            y = 0.62 - j * 0.1
+            fig.text(0.24, y, k, color=ACC, fontsize=22, weight="light", alpha=a)
+            fig.text(0.42, y, v, color=FG, fontsize=18, weight="light", alpha=a)
+        out.append(grab(fig))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="story_vtvl_isaac.mp4")
     ap.add_argument("--only", nargs="*", default=None)
-    ap.add_argument("--cut", default="v1", choices=["v1", "v2"])
+    ap.add_argument("--cut", default="v1", choices=["v1", "v2", "v3"])
     a = ap.parse_args()
     out = RUNS / "videos" / a.out
     chapters = {
@@ -439,6 +510,29 @@ def main():
                                     ["gimbaled engine", "3 engines", "4 engines", "cold-gas thrusters"],
                                     "four engine layouts, each trained in Isaac", speed=3),
             "results": lambda: results2(FPS * 6),
+            "diagrams": lambda: layout_diagrams(FPS * 5),
+        }
+    if a.cut == "v3":  # physics v1 (ADR-0011) re-run, visual v1 assets; footage from runs/ppo_win-isaac/videos/render_v1.ps1
+        chapters = {
+            "title": lambda: title(FPS * 4, grid="g_v1_nom", head="Rocket landing in Isaac Sim, physics v1",
+                                   sub="aerodynamics, burning propellant and a CFD thrust map"),
+            "physics": lambda: physics_card(FPS * 5),
+            "retrain": lambda: grid_pair("g_v1_r3", "g_v1_nom", ["v0 policy in v1 physics",
+                                                                 "fine-tuned in v1 (300 iterations)"],
+                                         "Same 16 starts, new physics"),
+            "scenarios": lambda: quad(["v1_wind_rl", "v1_rcs_rl", "v1_noise_rl", "v1_lat_rl"],
+                                      ["strong wind", "RCS thruster failed", "sensor noise + latency", "far lateral start"],
+                                      "one policy fine-tuned per scenario",
+                                      notes=["seed 1001", "seed 1000", "seed 1000", "seed 1002"]),
+            "rl_vs_pd": lambda: quad(["v1_wind_pd", "v1_wind_rl", "v1_lat_pdt", "v1_lat_rl"],
+                                     ["strong wind · PD", "strong wind · RL", "far lateral · re-tuned PD",
+                                      "far lateral · RL"], "fixed-gain control vs learned policy",
+                                     notes=["seed 1001", "seed 1001", "seed 1002", "seed 1002"]),
+            "layouts": lambda: quad(["v1_ly_a", "v1_ly_b", "v1_ly_c", "v1_ly_d"],
+                                    ["gimbaled engine", "3 engines", "4 engines", "cold-gas thrusters"],
+                                    "four engine layouts, each trained in Isaac", speed=3,
+                                    notes=["seed 1000"] * 4),
+            "results": lambda: results_v1(FPS * 7),
             "diagrams": lambda: layout_diagrams(FPS * 5),
         }
     w = imageio.get_writer(out, fps=FPS, codec="libx264", quality=5, macro_block_size=8)

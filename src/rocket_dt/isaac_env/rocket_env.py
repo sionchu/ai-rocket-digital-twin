@@ -204,6 +204,8 @@ class VtvlEnvCfg(DirectRLEnvCfg):
     variable_mass: bool = False
     # look only: "v1" = assets/vtvl_v1 vehicle, concrete pad + lakebed per env, baked sky dome + sun
     visual: str = "v0"
+    visual_sky_intensity: float = 350.0  # tuned by eye on the RTX headless capture (1000 overexposed the sky)
+    visual_sun_intensity: float = 2500.0
 
     # episode logic
     terminate_at_touchdown: bool = True  # training: end at first contact; evaluation: False + settle
@@ -368,7 +370,19 @@ class VtvlEnv(DirectRLEnv):
             from rocket_dt.isaac_env.visual_assets import PAD_USD, SKY_HDR, SKY_SUN_AZIMUTH_DEG, SKY_SUN_ELEVATION_DEG
             pad = sim_utils.UsdFileCfg(usd_path=str(PAD_USD))
             pad.func("/World/envs/env_.*/Pad", pad)
-            dome = sim_utils.DomeLightCfg(intensity=1000.0, texture_file=str(SKY_HDR), texture_format="latlong")
+            # the physics ground plane stays as collider only; its grid visual z-fights with the lakebed at z = 0
+            from pxr import UsdGeom
+            stage = sim_utils.get_current_stage()
+            for prim in stage.GetPrimAtPath(self.cfg.terrain.prim_path).GetChildren():
+                UsdGeom.Imageable(prim).MakeInvisible()
+            # one landing site: the other envs keep only their concrete pad (overlapping lakebeds z-fight)
+            for i in range(1, self.scene.cfg.num_envs):
+                for part in ("ground", "ridges", "props"):
+                    prim = stage.GetPrimAtPath(f"/World/envs/env_{i}/Pad/{part}")
+                    if prim.IsValid():
+                        UsdGeom.Imageable(prim).MakeInvisible()
+            dome = sim_utils.DomeLightCfg(intensity=self.cfg.visual_sky_intensity, texture_file=str(SKY_HDR),
+                                          texture_format="latlong")
             dome.func("/World/Light", dome)
             # sun along the baked sky's sun direction: rotate the light's -Z onto -(sun direction)
             e, a = math.radians(SKY_SUN_ELEVATION_DEG), math.radians(SKY_SUN_AZIMUTH_DEG)
@@ -376,7 +390,7 @@ class VtvlEnv(DirectRLEnv):
             axis = np.cross([0.0, 0.0, 1.0], to_sun)
             ang = math.acos(float(np.clip(to_sun[2], -1, 1)))
             axis = axis / np.linalg.norm(axis)
-            sun = sim_utils.DistantLightCfg(intensity=3000.0, color=(1.0, 0.93, 0.82), angle=0.53)
+            sun = sim_utils.DistantLightCfg(intensity=self.cfg.visual_sun_intensity, color=(1.0, 0.93, 0.82), angle=0.53)
             sun.func("/World/Sun", sun, orientation=(math.cos(ang / 2), *(axis * math.sin(ang / 2))))
             return
         light = sim_utils.DomeLightCfg(intensity=self.cfg.sky_intensity, color=tuple(self.cfg.sky_color))

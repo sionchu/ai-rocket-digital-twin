@@ -48,6 +48,7 @@
 | 엔진 배치 (`win-isaac`) | **PASS** (학습 가능) | 같은 기체에서 RL이 착륙 학습: 3엔진 차동 스로틀 60/60, 4엔진 60/60, 고정 주엔진 + 냉가스 자세 59/60. PD 기준선 없음(NOT_RUN). ADR-0010 |
 | 분할 화면 영상 (`win-isaac`) | 결과 | 58.6 s, 8.8 MB: 학습 단계 → 시나리오 4분할 → 강풍·원거리 PD vs RL → 엔진 배치 4분할 → 결과 → 배치 도식. `runs/ppo_win-isaac/videos/story_v2_scenarios_layouts.mp4` |
 | 물리 v1 재학습·평가 (`win-isaac`) | **PARTIAL** | ADR-0011 물리(공력, 가변 질량, CFD 맵)로 RL 8개 재학습, 60회 평가. PD 기본 / PD 재튜닝 / RL 기본 / RL 시나리오: nominal 60/60/60/-, 강풍 41/44/27/56, RCS 고장 60/60/26/35, 잡음 60/60/60/6, 원거리 37/60/13/30. 배치 RL 3엔진 43, 4엔진 17, 냉가스 41 (v0 60/60/59). v0의 "RL이 PD보다 낫다"는 강풍에만 남는다. 미세조정 실패: rcs_fail, noise, 배치 3종(iter를 v0와 같게 고정). 재튜닝 PD wind try1 38/60은 실패 기록. `runs/ppo_win-isaac/eval_v1/README.md` |
+| 물리 v1 영상 (`win-isaac`) | 결과 | 60.3 s, 7.4 MB. 새 기체 에셋(visual v1)을 Isaac에서 처음 렌더링(물리 격자 바닥은 콜라이더만 남기고 숨김, 하늘 밝기 350). 순서: 제목 → v1 물리 변경점 → 같은 16 시작점에서 v0 정책 0/16 vs v1 미세조정 16/16 → 시나리오별 RL 4분할 → 강풍·원거리 PD vs RL → 배치 4분할 → eval_v1 결과 카드(v0 병기) → 배치 도식. 장면별 결과는 같은 시드의 평가와 일치. `runs/ppo_win-isaac/videos/story_v3_physics_v1.mp4`, `render_v1.ps1`, `render_story.py --cut v3` |
 | Isaac 질량 갱신 | 결과 | `set_masses_index`는 읽기값만 바뀌고 GPU 동역학 불변(측정 a_z 6.76 vs 기대 7.94 m/s²). env v0는 질량 고정. 착지 때 7.1% 무거움(ADR-0009) |
 
 ## 고정 버전

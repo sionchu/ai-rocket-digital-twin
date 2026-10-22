@@ -451,6 +451,104 @@ def results_v1(n, grid="g_v1_nom", speed=2):
     return out
 
 
+def ecu_hero(name, head, sub, hold=2.0, title_s=3.5):
+    """Cold open: one landing at real time with the flight computer's outputs beside it, every value from the
+    Isaac telemetry of that run (50 Hz control steps): engine state, throttle command, gimbal, 4 RCS, thrust, mass."""
+    m = Mission(name)
+    tel, steps = m.tel, m.tel["steps"]
+    t_all = np.array([s["t"] for s in steps])
+    thr = np.array([s["throttle"] if s["engine_on"] else 0.0 for s in steps])
+    gim = np.degrees(np.array([s["gimbal_rad"] for s in steps]))
+    rcs = np.array([s["rcs_frac"] for s in steps])
+    fmain = np.array([s["f_main_n"] for s in steps]) / 1000
+    mass = np.array([s.get("mass_kg", tel.get("mass_kg_fixed", 0.0)) for s in steps])
+    aero = np.array([np.linalg.norm(s["wind_w"]) for s in steps])
+    cut = next((s["t"] for s in steps if not s["engine_on"]), None)
+    failed = tel.get("rcs_failed", [])
+    win = 6.0
+    n = len(m) + int(FPS * hold)
+    out = []
+    px = 0.685  # ECU panel left edge
+    for i in range(n):
+        img, s = m.at(i)
+        k = next(j for j, st in enumerate(steps) if st["k"] == s["k"])
+        t = s["t"]
+        fig = new_fig()
+        video(fig, img, rect=(0, 0, px, 1))
+        im2 = m.engine(s)
+        if im2 is not None:
+            ax2 = fig.add_axes([0.012, 0.03, 0.2, 0.2 * W / H * 360 / 640])
+            ax2.imshow(im2), ax2.axis("off")
+            fig.text(0.016, 0.03 + 0.2 * W / H * 360 / 640 - 0.03, "engine camera", color=FG, fontsize=11,
+                     bbox=dict(facecolor="#000000", alpha=0.45, edgecolor="none"))
+        if i < FPS * title_s:  # title over the opening seconds of footage
+            a = min(1.0, i / 8, (FPS * title_s - i) / 8)
+            fig.text(px / 2, 0.86, head, color=FG, fontsize=34, ha="center", weight="light", alpha=a,
+                     bbox=dict(facecolor="#000000", alpha=0.35 * a, edgecolor="none", boxstyle="round,pad=0.4"))
+            fig.text(px / 2, 0.8, sub, color=FG, fontsize=16, ha="center", alpha=a)
+        else:
+            label(fig, "strong wind · RL policy trained for it · seed 1001", size=16, y=0.95)
+        if i >= len(m) - 1:
+            verdict(fig, m.ep, x=px / 2, y=0.5)
+        # ---- ECU panel
+        fig.add_artist(plt.Rectangle((px, 0), 1 - px, 1, color=BG, transform=fig.transFigure, zorder=-1))
+        fig.text(px + 0.015, 0.955, "FLIGHT COMPUTER OUTPUTS", color=FG, fontsize=15, weight="bold")
+        fig.text(px + 0.015, 0.93, f"50 Hz control step   t = {t:5.2f} s", color=DIM, fontsize=11,
+                 family="monospace")
+        on = s["engine_on"]
+        state = "MAIN ENGINE  ON" if on else "MAIN ENGINE  CUTOFF"
+        fig.text(px + 0.015, 0.885, "●", color=OKC if on else BADC, fontsize=18)
+        fig.text(px + 0.04, 0.888, state, color=FG, fontsize=15, family="monospace")
+        if cut is not None and not on:
+            fig.text(px + 0.04, 0.865, f"cutoff at touchdown, t = {cut:.2f} s", color=DIM, fontsize=10)
+        y0 = 0.825
+        rows = (("THROTTLE CMD", f"{100 * thr[k]:5.1f} %"), ("MAIN THRUST", f"{fmain[k]:5.1f} kN"),
+                ("VEHICLE MASS", f"{mass[k]:7.1f} kg"), ("AERO FORCE", f"{aero[k]:6.0f} N"),
+                ("TILT", f"{s['tilt_deg']:5.1f} °"))
+        for j, (lab, val) in enumerate(rows):
+            y = y0 - j * 0.035
+            fig.text(px + 0.015, y, lab, color=DIM, fontsize=11)
+            fig.text(0.985, y, val, color=FG, fontsize=13, ha="right", family="monospace")
+        # gimbal crosshair (±6 deg) and RCS lamps
+        ax = fig.add_axes([px + 0.02, 0.43, 0.12, 0.12 * W / H])
+        ax.set_xlim(-7, 7), ax.set_ylim(-7, 7), ax.set_aspect("equal"), ax.axis("off")
+        ax.add_patch(plt.Circle((0, 0), 6, fill=False, ec=LINE, lw=1.2))
+        ax.plot([-6, 6], [0, 0], color=LINE, lw=0.8), ax.plot([0, 0], [-6, 6], color=LINE, lw=0.8)
+        ax.plot(gim[max(0, k - 50):k + 1, 0], gim[max(0, k - 50):k + 1, 1], color=ACC, lw=1, alpha=0.5)
+        ax.add_patch(plt.Circle((gim[k, 0], gim[k, 1]), 0.7, color=ACC))
+        fig.text(px + 0.08, 0.415, f"GIMBAL  {gim[k, 0]:+.1f}° / {gim[k, 1]:+.1f}°", color=DIM, fontsize=10,
+                 ha="center", family="monospace")
+        for j in range(4):
+            rid = f"rcs_{j + 1:02d}"
+            f = rcs[k, j]
+            col = BADC if rid in failed else (OKC if f > 0.05 else LINE)
+            yy = 0.54 - j * 0.03
+            fig.text(px + 0.17, yy, "●", color=col, fontsize=14)
+            fig.text(px + 0.19, yy + 0.003, f"RCS {j + 1}  {100 * f:4.0f} %", color=FG if f > 0.05 else DIM,
+                     fontsize=11, family="monospace")
+        # strip charts, last `win` seconds
+        sel = (t_all <= t) & (t_all >= t - win)
+        charts = (("throttle cmd", thr, (0, 1), ACC), ("gimbal pitch / yaw [°]", gim, (-6.5, 6.5), None),
+                  ("RCS duty", rcs, (0, 1), None))
+        for j, (lab, arr, lim, col) in enumerate(charts):
+            a3 = fig.add_axes([px + 0.02, 0.27 - j * 0.11, 0.29, 0.075], facecolor="#151b23")
+            if arr.ndim == 1:
+                a3.plot(t_all[sel], arr[sel], color=col, lw=1.4)
+            else:
+                cols = [ACC, "#8ab4f8"] if arr.shape[1] == 2 else [OKC, "#8ab4f8", "#f5b14c", "#ff8a80"]
+                for c in range(arr.shape[1]):
+                    a3.plot(t_all[sel], arr[sel, c], color=cols[c], lw=1.1)
+            a3.set_xlim(t - win, t), a3.set_ylim(*lim)
+            a3.set_xticks([]), a3.set_yticks([])
+            for sp in a3.spines.values():
+                sp.set_color(LINE)
+            fig.text(px + 0.022, 0.27 - j * 0.11 + 0.08, lab, color=DIM, fontsize=10)
+        fig.text(px + 0.015, 0.012, "Isaac Lab 3.0 · physics v1 · values from the run's telemetry",
+                 color=DIM, fontsize=9)
+        out.append(grab(fig))
+    return out
+
+
 def physics_card(n, grid="g_v1_nom", speed=2):
     """What changed between v0 and v1 (ADR-0011), over dimmed v1 footage."""
     g = Grid(grid)
@@ -477,7 +575,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="story_vtvl_isaac.mp4")
     ap.add_argument("--only", nargs="*", default=None)
-    ap.add_argument("--cut", default="v1", choices=["v1", "v2", "v3"])
+    ap.add_argument("--cut", default="v1", choices=["v1", "v2", "v3", "v4"])
     a = ap.parse_args()
     out = RUNS / "videos" / a.out
     chapters = {
@@ -512,7 +610,7 @@ def main():
             "results": lambda: results2(FPS * 6),
             "diagrams": lambda: layout_diagrams(FPS * 5),
         }
-    if a.cut == "v3":  # physics v1 (ADR-0011) re-run, visual v1 assets; footage from runs/ppo_win-isaac/videos/render_v1.ps1
+    if a.cut in ("v3", "v4"):  # physics v1 (ADR-0011) re-run, visual v1 assets; footage from runs/ppo_win-isaac/videos/render_v1.ps1
         chapters = {
             "title": lambda: title(FPS * 4, grid="g_v1_nom", head="Rocket landing in Isaac Sim, physics v1",
                                    sub="aerodynamics, burning propellant and a CFD thrust map"),
@@ -534,6 +632,19 @@ def main():
                                     notes=["seed 1000"] * 4),
             "results": lambda: results_v1(FPS * 7),
             "diagrams": lambda: layout_diagrams(FPS * 5),
+        }
+    if a.cut == "v4":  # v3 reordered: footage first (cold open with flight-computer outputs), cards last
+        v3 = chapters
+        chapters = {
+            "hero": lambda: ecu_hero("v1_hero_wind", "Rocket landing in Isaac Sim",
+                                     "aerodynamics, burning propellant, CFD thrust map  ·  RL policy in strong wind"),
+            "layouts": v3["layouts"],
+            "rl_vs_pd": v3["rl_vs_pd"],
+            "retrain": v3["retrain"],
+            "scenarios": v3["scenarios"],
+            "results": v3["results"],
+            "physics": lambda: physics_card(int(FPS * 3.5)),
+            "diagrams": lambda: layout_diagrams(int(FPS * 3.5)),
         }
     w = imageio.get_writer(out, fps=FPS, codec="libx264", quality=5, macro_block_size=8)
     total = 0

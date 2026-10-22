@@ -27,4 +27,8 @@ M "v1_ly_a" @("--controller", "ppo", "--checkpoint", "$T\v1_nominal\model_697.pt
 M "v1_ly_b" @("--controller", "ppo", "--checkpoint", "$T\v1_tri_diff\model_599.pt", "--layout", "tri_diff", "--seed", "1000")
 M "v1_ly_c" @("--controller", "ppo", "--checkpoint", "$T\v1_quad_diff\model_599.pt", "--layout", "quad_diff", "--seed", "1000")
 M "v1_ly_d" @("--controller", "ppo", "--checkpoint", "$T\v1_coldgas\model_599.pt", "--layout", "coldgas", "--seed", "1000")
+# cut v4 cold open: Flow flame (brighter for the daylight sky) + engine camera
+M "v1_hero_wind" @("--controller", "ppo", "--checkpoint", "$T\v1_wind\model_996.pt", "--scenario", "wind", "--seed", "1001",
+    "--plume", "flow", "--flow_set", "flowRender/rayMarch:colorScale=20", "flowOffscreen/colormap:colorScale=20",
+    "box:temperature=3", "box:fuel=3", "--engine_cam", "--cam_dist", "18")
 "RENDER_V1_DONE"

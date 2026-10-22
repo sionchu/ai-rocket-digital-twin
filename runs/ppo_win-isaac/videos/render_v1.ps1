@@ -31,4 +31,8 @@ M "v1_ly_d" @("--controller", "ppo", "--checkpoint", "$T\v1_coldgas\model_599.pt
 M "v1_hero_wind" @("--controller", "ppo", "--checkpoint", "$T\v1_wind\model_996.pt", "--scenario", "wind", "--seed", "1001",
     "--plume", "flow", "--flow_set", "flowRender/rayMarch:colorScale=20", "flowOffscreen/colormap:colorScale=20",
     "box:temperature=3", "box:fuel=3", "--engine_cam", "--cam_dist", "18")
+# cut v5 cold open: ground-start hop (ADR-0012)
+M "v1_hero_hop" @("--controller", "ppo", "--checkpoint", "$T\v1_hop\model_1296.pt", "--scenario", "hop", "--seed", "1000",
+    "--plume", "flow", "--flow_set", "flowRender/rayMarch:colorScale=20", "flowOffscreen/colormap:colorScale=20",
+    "box:temperature=3", "box:fuel=3", "--engine_cam", "--cam_dist", "22")
 "RENDER_V1_DONE"

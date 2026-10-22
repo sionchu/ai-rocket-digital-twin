@@ -5,6 +5,7 @@
 | rcs_fail | 60 → 60/60 | 60/60 | 27 → 26/60 | 57 → 35/60 | landed 60 / landed 35, landing_limits 25 |
 | noise | 60 → 60/60 | 60/60 | 60 → 60/60 | 17 → 6/60 | landed 60 / landed 6, landing_limits 54 |
 | lateral | 5 → 37/60 | 60/60 | 28 → 13/60 | 52 → 30/60 | landed 37, landing_limits 13, tip_over_or_loss_of_control 10 / landed 30, landing_limits 29, tip_over_or_loss_of_control 1 |
+| hop | - → 60/60 | NOT_RUN | - → NOT_RUN | - → 60/60 | landed 60 / landed 60 |
 
 | 배치 (RL, nominal) | v0 | v1 |
 |---|---|---|

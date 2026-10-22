@@ -41,12 +41,14 @@ class PDPolicy:
         p, q, v, w_b = (t.detach().cpu().numpy().astype(float) for t in env.measured_state())
         mp, mr = env.m_prop.cpu().numpy().astype(float), env.m_rcs.cpu().numpy().astype(float)
         thr_act = env.act.throttle.cpu().numpy().astype(float)
+        phase, tgt = env.hop_phase.cpu().numpy(), env._target.cpu().numpy().astype(float)
         tmin, tmax, gmax, sdt = env.act.tmin, env.act.tmax, env.gmax, env.step_dt
         a = np.zeros((env.num_envs, 7))
         for i in range(env.num_envs):
             x = np.concatenate([p[i], v[i], [q[i, 3], q[i, 0], q[i, 1], q[i, 2]], w_b[i], [mp[i], mr[i]]])
             ms = self.mm.evaluate(max(mp[i], 0.0), max(mr[i], 0.0))
-            cmd = self.ctrl(x, isa_pressure(max(p[i, 2], 0.0)), "descent", np.zeros(3),
+            mode = "hover" if int(phase[i]) == 0 else "descent"  # hop: hover point first, then the landing pad
+            cmd = self.ctrl(x, isa_pressure(max(p[i, 2], 0.0)), mode, tgt[i],
                             ms.com_body_m[2] - self.feet_zmin, thr_act[i], self.failed)
             a[i, 0] = 2 * (cmd.throttle - tmin) / (tmax - tmin) - 1
             a[i, 1:3] = np.asarray(cmd.gimbal_rad) / gmax

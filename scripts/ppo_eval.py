@@ -23,7 +23,7 @@ parser.add_argument("--checkpoint", default=None, help="PPO checkpoint (required
 parser.add_argument("--controller", default="ppo", choices=["ppo", "pd"],
                     help="pd = rocket_dt CascadedPD (numpy, per env) driving the same Isaac env through its action API")
 parser.add_argument("--engine", default="conical_A")
-parser.add_argument("--scenario", default="nominal", choices=["nominal", "wind", "rcs_fail", "noise", "lateral"])
+parser.add_argument("--scenario", default="nominal", choices=["nominal", "wind", "rcs_fail", "noise", "lateral", "hop"])
 parser.add_argument("--layout", default="gimbal_rcs", choices=["gimbal_rcs", "tri_diff", "quad_diff", "coldgas"])
 parser.add_argument("--map_source", default=None, help="ideal1d | cfd (default: ideal1d for v0, cfd for v1)")
 parser.add_argument("--physics", default="v0", choices=["v0", "v1"],

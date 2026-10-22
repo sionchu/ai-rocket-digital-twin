@@ -411,8 +411,12 @@ def results_v1(n, grid="g_v1_nom", speed=2):
     def k(sc, c):
         r = s[sc].get(c)
         return None if r is None else r["success"]
+    if s.get("hop"):  # ground-start hop exists only in v1 (no v0 number, no re-tuned PD, no nominal-RL run)
+        rows.append(("ground-start hop", "hop"))
+        v0["hop"] = (None, None, None)
     data = [(lab, [k(sc, "pd"), k(sc, "pd_tuned"), k(sc, "rl_nominal"), k(sc, "rl_scenario")], v0[sc])
             for lab, sc in rows]
+    ly = 0.28 if len(rows) == 4 else 0.235
     lay = [(lab, s["layouts"][d]["success"], v) for lab, d, v in (("3 engines", "tri_diff", 60),
                                                                   ("4 engines", "quad_diff", 60),
                                                                   ("cold-gas", "coldgas", 59))]
@@ -436,11 +440,15 @@ def results_v1(n, grid="g_v1_nom", speed=2):
                          fontsize=34, ha="center", va="center", weight="light")
                 if o is not None:
                     fig.text(x + 0.033, y - 0.012, f"{o}", color=DIM, fontsize=13, ha="left", va="center")
-        fig.text(0.08, 0.28, "layouts (RL, nominal)", color=DIM, fontsize=16)
+        fig.text(0.08, ly, "layouts (RL, nominal)", color=DIM, fontsize=16)
         for j, (lab, v, o) in enumerate(lay):
-            fig.text(0.42 + j * 0.17, 0.28, f"{lab}  {v}", color=OKC if v >= 54 else (ACC if v >= 40 else BADC),
+            fig.text(0.42 + j * 0.17, ly, f"{lab}  {v}", color=OKC if v >= 54 else (ACC if v >= 40 else BADC),
                      fontsize=20, ha="center", weight="light")
-            fig.text(0.42 + j * 0.17, 0.245, f"v0 {o}", color=DIM, fontsize=12, ha="center")
+            fig.text(0.42 + j * 0.17, ly - 0.035, f"v0 {o}", color=DIM, fontsize=12, ha="center")
+        if s.get("hop"):
+            fig.text(0.5, 0.165, "Ground-start hop (new): ignition, climb, 1 s hover hold, landing on a second pad "
+                                 f"- PD {k('hop', 'pd')}/60, RL {k('hop', 'rl_scenario')}/60.", color=ACC,
+                     fontsize=15, ha="center")
         fig.text(0.5, 0.13, "With aerodynamics, burning propellant and a CFD thrust map, the scenario-trained RL policy "
                             "still wins only in strong wind;", color=FG, fontsize=15, ha="center")
         fig.text(0.5, 0.095, "a re-tuned PD lands every far-lateral start. Fine-tunes for RCS failure, noise and the "
@@ -451,7 +459,8 @@ def results_v1(n, grid="g_v1_nom", speed=2):
     return out
 
 
-def ecu_hero(name, head, sub, hold=2.0, title_s=3.5):
+def ecu_hero(name, head, sub, hold=2.0, title_s=3.5, caption="strong wind · RL policy trained for it · seed 1001",
+             speed=1.0, slow_s=0.0):
     """Cold open: one landing at real time with the flight computer's outputs beside it, every value from the
     Isaac telemetry of that run (50 Hz control steps): engine state, throttle command, gimbal, 4 RCS, thrust, mass."""
     m = Mission(name)
@@ -466,11 +475,13 @@ def ecu_hero(name, head, sub, hold=2.0, title_s=3.5):
     cut = next((s["t"] for s in steps if not s["engine_on"]), None)
     failed = tel.get("rcs_failed", [])
     win = 6.0
-    n = len(m) + int(FPS * hold)
+    slow = int(FPS * slow_s)  # real time for the first slow_s seconds (ignition), then `speed`
+    idx = lambda i: i if i < slow else int(slow + (i - slow) * speed)  # noqa: E731
+    n = slow + int(max(len(m) - slow, 0) / speed) + int(FPS * hold)
     out = []
     px = 0.685  # ECU panel left edge
     for i in range(n):
-        img, s = m.at(i)
+        img, s = m.at(idx(i))
         k = next(j for j, st in enumerate(steps) if st["k"] == s["k"])
         t = s["t"]
         fig = new_fig()
@@ -487,20 +498,37 @@ def ecu_hero(name, head, sub, hold=2.0, title_s=3.5):
                      bbox=dict(facecolor="#000000", alpha=0.35 * a, edgecolor="none", boxstyle="round,pad=0.4"))
             fig.text(px / 2, 0.8, sub, color=FG, fontsize=16, ha="center", alpha=a)
         else:
-            label(fig, "strong wind · RL policy trained for it · seed 1001", size=16, y=0.95)
-        if i >= len(m) - 1:
+            label(fig, caption, size=16, y=0.95)
+        if idx(i) >= len(m) - 1:
             verdict(fig, m.ep, x=px / 2, y=0.5)
+        if speed != 1.0 and i >= slow:
+            fig.text(px - 0.01, 0.95, f"{speed:g}x", color=DIM, fontsize=12, ha="right")
         # ---- ECU panel
         fig.add_artist(plt.Rectangle((px, 0), 1 - px, 1, color=BG, transform=fig.transFigure, zorder=-1))
         fig.text(px + 0.015, 0.955, "FLIGHT COMPUTER OUTPUTS", color=FG, fontsize=15, weight="bold")
         fig.text(px + 0.015, 0.93, f"50 Hz control step   t = {t:5.2f} s", color=DIM, fontsize=11,
                  family="monospace")
-        on = s["engine_on"]
-        state = "MAIN ENGINE  ON" if on else "MAIN ENGINE  CUTOFF"
-        fig.text(px + 0.015, 0.885, "●", color=OKC if on else BADC, fontsize=18)
+        on, kig = s["engine_on"], s.get("k_ign", 1.0)
+        ign = tel.get("ignition")
+        if not on:
+            state, col = "MAIN ENGINE  CUTOFF", BADC
+        elif ign and t < ign["cmd_s"]:
+            state, col = f"ARMED   T-{ign['cmd_s'] - t:.1f} s", ACC
+        elif kig <= 0.0:
+            state, col = "IGNITION CMD", ACC
+        elif kig < 0.95:
+            state, col = f"THRUST RISE  {100 * kig:3.0f} %", ACC
+        else:
+            state, col = "MAIN ENGINE  ON", OKC
+        fig.text(px + 0.015, 0.885, "●", color=col, fontsize=18)
         fig.text(px + 0.04, 0.888, state, color=FG, fontsize=15, family="monospace")
         if cut is not None and not on:
             fig.text(px + 0.04, 0.865, f"cutoff at touchdown, t = {cut:.2f} s", color=DIM, fontsize=10)
+        elif ign:
+            ph = ("ON PAD" if not s.get("airborne", True) else
+                  ("CLIMB / HOVER" if s.get("hop_phase", 1) == 0 else "DESCENT TO LANDING PAD"))
+            fig.text(px + 0.04, 0.865, f"{ph}   ·   ignition delay {ign['delay_s']} s, rise {ign['tau_s']} s (assumed)",
+                     color=DIM, fontsize=10)
         y0 = 0.825
         rows = (("THROTTLE CMD", f"{100 * thr[k]:5.1f} %"), ("MAIN THRUST", f"{fmain[k]:5.1f} kN"),
                 ("VEHICLE MASS", f"{mass[k]:7.1f} kg"), ("AERO FORCE", f"{aero[k]:6.0f} N"),
@@ -575,7 +603,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="story_vtvl_isaac.mp4")
     ap.add_argument("--only", nargs="*", default=None)
-    ap.add_argument("--cut", default="v1", choices=["v1", "v2", "v3", "v4"])
+    ap.add_argument("--cut", default="v1", choices=["v1", "v2", "v3", "v4", "v5"])
     a = ap.parse_args()
     out = RUNS / "videos" / a.out
     chapters = {
@@ -610,7 +638,7 @@ def main():
             "results": lambda: results2(FPS * 6),
             "diagrams": lambda: layout_diagrams(FPS * 5),
         }
-    if a.cut in ("v3", "v4"):  # physics v1 (ADR-0011) re-run, visual v1 assets; footage from runs/ppo_win-isaac/videos/render_v1.ps1
+    if a.cut in ("v3", "v4", "v5"):  # physics v1 (ADR-0011) re-run, visual v1 assets; footage from runs/ppo_win-isaac/videos/render_v1.ps1
         chapters = {
             "title": lambda: title(FPS * 4, grid="g_v1_nom", head="Rocket landing in Isaac Sim, physics v1",
                                    sub="aerodynamics, burning propellant and a CFD thrust map"),
@@ -633,7 +661,7 @@ def main():
             "results": lambda: results_v1(FPS * 7),
             "diagrams": lambda: layout_diagrams(FPS * 5),
         }
-    if a.cut == "v4":  # v3 reordered: footage first (cold open with flight-computer outputs), cards last
+    if a.cut in ("v4", "v5"):  # v3 reordered: footage first (cold open with flight-computer outputs), cards last
         v3 = chapters
         chapters = {
             "hero": lambda: ecu_hero("v1_hero_wind", "Rocket landing in Isaac Sim",
@@ -645,6 +673,15 @@ def main():
             "results": v3["results"],
             "physics": lambda: physics_card(int(FPS * 3.5)),
             "diagrams": lambda: layout_diagrams(int(FPS * 3.5)),
+        }
+    if a.cut == "v5":  # v4 + ground-start hop (ignition, liftoff, hover, landing on a second pad) as the cold open
+        v4 = chapters
+        chapters = {
+            "hop": lambda: ecu_hero("v1_hero_hop", "Rocket hop in Isaac Sim",
+                                    "ignition, liftoff, hover, landing on a second pad  ·  RL policy",
+                                    caption="ground start hop · RL policy · seed 1000", speed=1.6, slow_s=2.5),
+            "hero": lambda: ecu_hero("v1_hero_wind", "", "", title_s=0.0),
+            **{k: v for k, v in v4.items() if k != "hero"},
         }
     w = imageio.get_writer(out, fps=FPS, codec="libx264", quality=5, macro_block_size=8)
     total = 0

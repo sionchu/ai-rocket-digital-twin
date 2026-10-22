@@ -267,6 +267,32 @@
    "map_hash": "1833e5959ed69332"
   }
  },
+ "hop": {
+  "pd": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 83.29379412333171,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": null,
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "rl_scenario": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 67.42489789326986,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_hop\\model_1296.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  }
+ },
  "layouts": {
   "tri_diff": {
    "n": 60,

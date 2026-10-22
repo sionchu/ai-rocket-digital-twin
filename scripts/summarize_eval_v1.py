@@ -6,12 +6,12 @@ import json
 from pathlib import Path
 
 E = Path(__file__).resolve().parents[1] / "runs/ppo_win-isaac/eval_v1"
-SCEN = ["nominal", "wind", "rcs_fail", "noise", "lateral"]
+SCEN = ["nominal", "wind", "rcs_fail", "noise", "lateral", "hop"]
 CTRL = ["pd", "pd_tuned", "pd_tuned_try1", "rl_nominal", "rl_scenario"]
 LAYOUTS = ["tri_diff", "quad_diff", "coldgas"]
 # v0 (win-isaac, physics v0): PD / RL nominal (r3) / RL scenario, from ADR-0010 and README
 V0 = {"nominal": (60, 57, None), "wind": (43, 20, 54), "rcs_fail": (60, 27, 57), "noise": (60, 60, 17),
-      "lateral": (5, 28, 52)}
+      "lateral": (5, 28, 52), "hop": ("-", "-", None)}  # hop is new in v1 (ADR-0012)
 V0_LAYOUT = {"tri_diff": 60, "quad_diff": 60, "coldgas": 59}
 
 

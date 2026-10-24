@@ -1,4 +1,4 @@
-# Isaac footage for the physics-v1 story cut (render_story.py --cut v3): physics v1 + visual v1, label win-isaac.
+﻿# Isaac footage for the physics-v1 story cut (render_story.py --cut v3): physics v1 + visual v1, label win-isaac.
 # Seeds are named on screen; outcome rates per seed block are in runs/ppo_win-isaac/eval_v1.
 $ErrorActionPreference = "Continue"
 Set-Location D:\Workspace\ai-rocket-ppo
@@ -38,5 +38,6 @@ M "v1_hero_hop" @("--controller", "ppo", "--checkpoint", "$T\v1_hop\model_1296.p
 "RENDER_V1_DONE"
 
 # tip-over pair (cut v5 chapter 'tipover'): far lateral start, seed 1000
-M "v1_tip_pd" @("--controller", "pd", "--scenario", "lateral", "--seed", "1000")
+M "v1_tip_pd" @("--controller", "pd", "--scenario", "lateral", "--seed", "1000", "--max_tilt_deg", "179")  # video only: let the fall finish
 M "v1_tip_rl" @("--controller", "ppo", "--checkpoint", "$T\v1_lateral\model_1096.pt", "--scenario", "lateral", "--seed", "1000")
+

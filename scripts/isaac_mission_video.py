@@ -44,6 +44,8 @@ parser.add_argument("--look", choices=["default", "story"], default="default")
 parser.add_argument("--physics", default="v0", choices=["v0", "v1"], help="v1 = aero + variable mass + CFD map (ADR-0011)")
 parser.add_argument("--visual", default="v0", choices=["v0", "v1"], help="v1 = assets/vtvl_v1 vehicle, pad and sky")
 parser.add_argument("--pd_gains", default=None, help="tuned PDGains JSON from scripts/tune_pd.py (controller pd)")
+parser.add_argument("--max_tilt_deg", type=float, default=None,
+                    help="video only: tip-over termination angle (env default 60) so a fall can play out to the ground")
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 app = AppLauncher(args).app
@@ -122,6 +124,8 @@ def main():
     cfg.map_source = "cfd" if args.physics == "v1" else "ideal1d"
     cfg.aero = cfg.variable_mass = args.physics == "v1"
     cfg.visual = args.visual
+    if args.max_tilt_deg is not None:
+        cfg.max_tilt_rad = math.radians(args.max_tilt_deg)
     cfg.layout, cfg.scenario = args.layout, args.scenario
     cfg.apply_scenario()
     cfg.__post_init__()
@@ -211,6 +215,7 @@ def main():
                         "note": "assumed values, no engine test data"} if cfg.ignition else None, "layout": args.layout, "scenario_name": args.scenario,
            "rcs_failed": [], "rcs_ids": [t.id for t in env.spec.rcs],
            "physics": args.physics, "visual": args.visual, "pd_gains": args.pd_gains,
+           "max_tilt_deg_override": args.max_tilt_deg,
            "plume_mapping": "length = 0.6 + 6.0 * F/F_ref [m]; spread = clip(sqrt(Pe/Pa), 0.6, 1.8); Pe from "
                             "rocket_dt nozzle1d at logged throttle and ISA Pa. Visual representation of the 1D "
                             "nozzle output, not a combustion simulation.",

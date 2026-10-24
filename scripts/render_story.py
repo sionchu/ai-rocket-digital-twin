@@ -90,7 +90,9 @@ def band(fig, s, tel, x0=0.0, x1=1.0):
 
 def verdict(fig, ep, x, y=0.55, size=28):
     ok = ep.get("success")
-    txt = "LANDED" if ok else ("TIPPED OVER" if "tip" in ep.get("termination_reason", "") else "MISSED")
+    # tipped = passed the env's 60 deg tip-over limit (a video render may let the fall continue past it)
+    tip = "tip" in ep.get("termination_reason", "") or ep.get("max_tilt_deg", 0.0) > 60.0
+    txt = "LANDED" if ok else ("TIPPED OVER" if tip else "MISSED")
     fig.text(x, y, txt, color=OKC if ok else BADC, fontsize=size, ha="center", weight="bold")
     if ep.get("touchdown"):
         fig.text(x, y - 0.045, f"{abs(ep['td_vz']):.1f} m/s  ·  {ep['td_pos_err']:.1f} m from pad", color=FG,

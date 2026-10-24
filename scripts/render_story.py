@@ -90,7 +90,8 @@ def band(fig, s, tel, x0=0.0, x1=1.0):
 
 def verdict(fig, ep, x, y=0.55, size=28):
     ok = ep.get("success")
-    fig.text(x, y, "LANDED" if ok else "MISSED", color=OKC if ok else BADC, fontsize=size, ha="center", weight="bold")
+    txt = "LANDED" if ok else ("TIPPED OVER" if "tip" in ep.get("termination_reason", "") else "MISSED")
+    fig.text(x, y, txt, color=OKC if ok else BADC, fontsize=size, ha="center", weight="bold")
     if ep.get("touchdown"):
         fig.text(x, y - 0.045, f"{abs(ep['td_vz']):.1f} m/s  ·  {ep['td_pos_err']:.1f} m from pad", color=FG,
                  fontsize=size * 0.5, ha="center")
@@ -681,7 +682,12 @@ def main():
                                     "ignition, liftoff, hover, landing on a second pad  ·  RL policy",
                                     caption="ground start hop · RL policy · seed 1000", speed=1.6, slow_s=2.5),
             "hero": lambda: ecu_hero("v1_hero_wind", "", "", title_s=0.0),
-            **{k: v for k, v in v4.items() if k != "hero"},
+            **{k: v for k, v in v4.items() if k not in ("hero", "retrain", "scenarios", "results", "physics",
+                                                          "diagrams")},
+            # a real tip-over: default PD, far lateral start, seed 1000 (one of its 10/60 tip-overs in eval_v1)
+            "tipover": lambda: missions(["v1_tip_pd", "v1_tip_rl"], ["default PD", "RL trained here"],
+                                        "far lateral start, seed 1000", speed=2),
+            **{k: v4[k] for k in ("retrain", "scenarios", "results", "physics", "diagrams")},
         }
     w = imageio.get_writer(out, fps=FPS, codec="libx264", quality=5, macro_block_size=8)
     total = 0

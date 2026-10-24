@@ -36,3 +36,7 @@ M "v1_hero_hop" @("--controller", "ppo", "--checkpoint", "$T\v1_hop\model_1296.p
     "--plume", "flow", "--flow_set", "flowRender/rayMarch:colorScale=20", "flowOffscreen/colormap:colorScale=20",
     "box:temperature=3", "box:fuel=3", "--engine_cam", "--cam_dist", "22")
 "RENDER_V1_DONE"
+
+# tip-over pair (cut v5 chapter 'tipover'): far lateral start, seed 1000
+M "v1_tip_pd" @("--controller", "pd", "--scenario", "lateral", "--seed", "1000")
+M "v1_tip_rl" @("--controller", "ppo", "--checkpoint", "$T\v1_lateral\model_1096.pt", "--scenario", "lateral", "--seed", "1000")

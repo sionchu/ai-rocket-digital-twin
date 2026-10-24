@@ -1,0 +1,337 @@
+{
+ "nominal": {
+  "pd": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 77.78262500762939,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": null,
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "pd_tuned": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 101.61044171651204,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": null,
+   "pd_gains": "runs\\pd_tuning\\nominal.json",
+   "map_hash": "1833e5959ed69332"
+  },
+  "rl_nominal": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 61.25415223439534,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_nominal\\model_697.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  }
+ },
+ "wind": {
+  "pd": {
+   "n": 60,
+   "success": 41,
+   "physics_valid": 60,
+   "fuel_mean_kg": 79.84867731730144,
+   "reasons": {
+    "landed": 41,
+    "landing_limits": 19
+   },
+   "checkpoint": null,
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "pd_tuned": {
+   "n": 60,
+   "success": 44,
+   "physics_valid": 60,
+   "fuel_mean_kg": 120.93501586914063,
+   "reasons": {
+    "landed": 44,
+    "landing_limits": 14,
+    "out_of_bounds": 2
+   },
+   "checkpoint": null,
+   "pd_gains": "runs\\pd_tuning\\wind.json",
+   "map_hash": "1833e5959ed69332"
+  },
+  "pd_tuned_try1": {
+   "n": 60,
+   "success": 38,
+   "physics_valid": 60,
+   "fuel_mean_kg": 101.75900077819824,
+   "reasons": {
+    "landed": 38,
+    "landing_limits": 22
+   },
+   "checkpoint": null,
+   "pd_gains": "runs\\pd_tuning\\wind_try1_8seeds.json",
+   "map_hash": "1833e5959ed69332"
+  },
+  "rl_nominal": {
+   "n": 60,
+   "success": 27,
+   "physics_valid": 60,
+   "fuel_mean_kg": 59.75760815938314,
+   "reasons": {
+    "landing_limits": 26,
+    "tip_over_or_loss_of_control": 6,
+    "landed": 27,
+    "out_of_bounds": 1
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_nominal\\model_697.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "rl_scenario": {
+   "n": 60,
+   "success": 56,
+   "physics_valid": 60,
+   "fuel_mean_kg": 50.54717178344727,
+   "reasons": {
+    "landed": 56,
+    "landing_limits": 4
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_wind\\model_996.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  }
+ },
+ "rcs_fail": {
+  "pd": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 77.79857635498047,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": null,
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "pd_tuned": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 108.04025535583496,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": null,
+   "pd_gains": "runs\\pd_tuning\\rcs_fail.json",
+   "map_hash": "1833e5959ed69332"
+  },
+  "rl_nominal": {
+   "n": 60,
+   "success": 26,
+   "physics_valid": 60,
+   "fuel_mean_kg": 58.79060433705648,
+   "reasons": {
+    "landing_limits": 29,
+    "landed": 26,
+    "tip_over_or_loss_of_control": 5
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_nominal\\model_697.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "rl_scenario": {
+   "n": 60,
+   "success": 35,
+   "physics_valid": 60,
+   "fuel_mean_kg": 57.156795247395834,
+   "reasons": {
+    "landing_limits": 25,
+    "landed": 35
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_rcs_fail\\model_996.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  }
+ },
+ "noise": {
+  "pd": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 77.41831696828207,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": null,
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "pd_tuned": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 103.56070276896159,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": null,
+   "pd_gains": "runs\\pd_tuning\\noise.json",
+   "map_hash": "1833e5959ed69332"
+  },
+  "rl_nominal": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 61.06344172159831,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_nominal\\model_697.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "rl_scenario": {
+   "n": 60,
+   "success": 6,
+   "physics_valid": 60,
+   "fuel_mean_kg": 100.21670392354329,
+   "reasons": {
+    "landing_limits": 54,
+    "landed": 6
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_noise\\model_996.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  }
+ },
+ "lateral": {
+  "pd": {
+   "n": 60,
+   "success": 37,
+   "physics_valid": 60,
+   "fuel_mean_kg": 77.5363862991333,
+   "reasons": {
+    "tip_over_or_loss_of_control": 10,
+    "landing_limits": 13,
+    "landed": 37
+   },
+   "checkpoint": null,
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "pd_tuned": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 105.82732048034669,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": null,
+   "pd_gains": "runs\\pd_tuning\\lateral.json",
+   "map_hash": "1833e5959ed69332"
+  },
+  "rl_nominal": {
+   "n": 60,
+   "success": 13,
+   "physics_valid": 60,
+   "fuel_mean_kg": 56.41272449493408,
+   "reasons": {
+    "landing_limits": 27,
+    "tip_over_or_loss_of_control": 20,
+    "landed": 13
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_nominal\\model_697.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "rl_scenario": {
+   "n": 60,
+   "success": 30,
+   "physics_valid": 60,
+   "fuel_mean_kg": 68.74665400187175,
+   "reasons": {
+    "landed": 30,
+    "landing_limits": 29,
+    "tip_over_or_loss_of_control": 1
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_lateral\\model_1096.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  }
+ },
+ "hop": {
+  "pd": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 83.29379412333171,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": null,
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "rl_scenario": {
+   "n": 60,
+   "success": 60,
+   "physics_valid": 60,
+   "fuel_mean_kg": 67.42489789326986,
+   "reasons": {
+    "landed": 60
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_hop\\model_1296.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  }
+ },
+ "layouts": {
+  "tri_diff": {
+   "n": 60,
+   "success": 43,
+   "physics_valid": 60,
+   "fuel_mean_kg": 47.71736056009929,
+   "reasons": {
+    "landed": 43,
+    "landing_limits": 17
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_tri_diff\\model_599.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "quad_diff": {
+   "n": 60,
+   "success": 17,
+   "physics_valid": 60,
+   "fuel_mean_kg": 52.020621109008786,
+   "reasons": {
+    "landing_limits": 43,
+    "landed": 17
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_quad_diff\\model_599.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  },
+  "coldgas": {
+   "n": 60,
+   "success": 41,
+   "physics_valid": 60,
+   "fuel_mean_kg": 65.03527272542318,
+   "reasons": {
+    "landed": 41,
+    "landing_limits": 19
+   },
+   "checkpoint": "D:\\Workspace\\ai-rocket-ppo\\runs\\ppo_win-isaac\\train\\v1_coldgas\\model_599.pt",
+   "pd_gains": null,
+   "map_hash": "1833e5959ed69332"
+  }
+ }
+}

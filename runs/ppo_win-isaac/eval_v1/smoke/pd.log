@@ -1,0 +1,39 @@
+﻿C:\dev\IsaacLab\isaaclab.bat : [WARNING] _isaac_sim is present but _isaac_sim\setup_conda_env.bat is missing; Isaac Sim
+ env vars not exported. 
+At line:1 char:423
++ ... | Out-Null; C:\dev\IsaacLab\isaaclab.bat -p scripts\ppo_eval.py --con ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([WARNING] _isaa... not exported. :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[WARNING] Re-extract the Isaac Sim Windows zip if you intend to use the bundled binary. 
+The '--headless' CLI argument is deprecated. Omit '--viz' for default headless. If config visualizers are enabled and y
+ou want to force headless, use '--viz none'.
+[ISAACLAB] AppLauncher initialization complete
+[INFO]: Base environment:
+	Environment device    : cuda:0
+	Environment seed      : None
+	Physics step-size     : 0.005
+	Rendering step-size   : 0.02
+	Environment step-size : 0.02
+[INFO]: libcarb.so unavailable — Fabric notice suspension disabled (Linux x86_64 only)
+[INFO]: Registered backend 'physx' for factory RigidObject.
+[INFO]: Time taken for scene creation Last: 1.169654 s, Mean: 1.169654 s, Std: 0.000000 s, N: 1
+[INFO]: Scene manager:  <class InteractiveScene>
+	Number of environments: 8
+	Environment spacing   : 40.0
+	Source prim name      : /World/envs/env_0
+	Global prim paths     : []
+	Replicate physics     : True
+[INFO]: Starting the simulation. This may take a few seconds. Please wait...
+[INFO]: Time taken for simulation start Last: 0.844520 s, Mean: 0.844520 s, Std: 0.000000 s, N: 1
+[INFO]: Completed setting up the environment...
+EVAL_RESULT {"summary": {"n": 8, "n_success": 8, "success_rate": 1.0, "wilson95": [0.6755843804891231, 1.0], "n_physics_valid": 8, "n_success_and_physics_valid": 8, "td_vz_abs_p95": 0.8269999831914902, "td_vh_p95": 0.6688115179538726, "td_pos_err_median": 0.29030942916870117, "td_pos_err_p95": 0.5475346177816389, "td_pos_err_max": 0.6434160470962524, "td_tilt_deg_max": 4.120129585266113, "fuel_mean_kg": 80.38933372497559, "fuel_p95_kg": 92.7144073486328, "termination_reasons": {"landed": 8}}, "n_frames": 0}
+[INFO]: SimulationContext cleared
+Loading user config located at: 'c:/dev/isaaclab/_isaac_sim/kit/data/Kit/IsaacLab/3.0/user.config.json'
+2026-10-21T16:18:37Z [0ms] [Warning] [omni.ext.plugin] [ext: isaaclab_visualizers] Extensions config 'extension.toml' doesn't exist 'c:/dev/isaaclab/source/isaaclab_visualizers' or 'c:/dev/isaaclab/source/isaaclab_visualizers/config'
+2026-10-21T16:18:38Z [856ms] [Warning] [omni.usd_config.extension] Enable omni.materialx.libs extension to use MaterialX
+2026-10-21T16:18:49Z [12,100ms] [Warning] [isaaclab.envs.direct_rl_env] Seed not set for the environment. The environment creation may not be deterministic.
+2026-10-21T16:18:49Z [12,184ms] [Warning] [isaaclab_physx.physics.physx_manager] TGS solver with enable_external_forces_every_iteration=False may cause noisy velocities.
+2026-10-21T16:18:51Z [13,966ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+[INFO] Using Python: "C:\dev\IsaacLab\_isaac_sim\kit\python\python.exe"

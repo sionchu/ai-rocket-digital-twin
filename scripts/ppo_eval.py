@@ -23,9 +23,12 @@ parser.add_argument("--checkpoint", default=None, help="PPO checkpoint (required
 parser.add_argument("--controller", default="ppo", choices=["ppo", "pd"],
                     help="pd = rocket_dt CascadedPD (numpy, per env) driving the same Isaac env through its action API")
 parser.add_argument("--engine", default="conical_A")
-parser.add_argument("--scenario", default="nominal", choices=["nominal", "wind", "rcs_fail", "noise", "lateral"])
+parser.add_argument("--scenario", default="nominal", choices=["nominal", "wind", "rcs_fail", "noise", "lateral", "hop"])
 parser.add_argument("--layout", default="gimbal_rcs", choices=["gimbal_rcs", "tri_diff", "quad_diff", "coldgas"])
-parser.add_argument("--map_source", default="ideal1d")
+parser.add_argument("--map_source", default=None, help="ideal1d | cfd (default: ideal1d for v0, cfd for v1)")
+parser.add_argument("--physics", default="v0", choices=["v0", "v1"],
+                    help="v1 = aero + variable mass + CFD map (ADR-0011); v0 = the ADR-0009/0010 env")
+parser.add_argument("--pd_gains", default=None, help="tuned PDGains JSON from scripts/tune_pd.py (controller pd)")
 parser.add_argument("--n", type=int, default=30)
 parser.add_argument("--seed0", type=int, default=1000)
 parser.add_argument("--out", default=None)
@@ -78,8 +81,11 @@ def main():
     from rocket_dt.schemas import load_vehicle
     n_rcs = len(layout_spec(args.layout, load_vehicle(REPO / "configs/vehicle_v0.yaml")).rcs)
     torch.manual_seed(args.seed0)  # measurement-noise stream of the "noise" scenario
+    if args.map_source is None:
+        args.map_source = "cfd" if args.physics == "v1" else "ideal1d"
     cfg = VtvlEnvCfg()
     cfg.engine, cfg.map_source = args.engine, args.map_source
+    cfg.aero = cfg.variable_mass = args.physics == "v1"
     cfg.layout, cfg.scenario = args.layout, args.scenario
     cfg.apply_scenario()
     cfg.__post_init__()  # regenerate the robot cfg for the selected engine's USD
@@ -101,7 +107,12 @@ def main():
         policy = runner.get_inference_policy(device=env.device)
     else:
         ck = REPO / "runs/ppo_win-isaac/pd_isaac" / "CascadedPD"
-        policy = PDPolicy(env, args.engine, args.map_source)
+        gains = None
+        if args.pd_gains:
+            from tune_pd import gains_from
+            gains = gains_from(json.loads(Path(args.pd_gains).read_text())["tuned_gains"])
+            ck = ck.with_name("CascadedPD_tuned")
+        policy = PDPolicy(env, args.engine, args.map_source, gains)
     obs = wenv.get_observations()
     frames, steps = [], 0
     max_steps = int(cfg.episode_length_s / (cfg.sim.dt * cfg.decimation)) * (n_episodes if args.video else 1) + 10
@@ -127,8 +138,9 @@ def main():
     out = Path(args.out) if args.out else (ck.parent / "eval" if args.controller == "ppo" else ck.parent)
     out.mkdir(parents=True, exist_ok=True)
     tag = f"{args.engine}_{args.map_source}" + ("" if args.layout == "gimbal_rcs" else f"_{args.layout}") + \
-        ("" if args.scenario == "nominal" else f"_{args.scenario}") + ("_video" if args.video else "")
-    res = {"label": "win-isaac", "layout": args.layout, "scenario": args.scenario, "controller": args.controller, "checkpoint": str(ck) if args.controller == "ppo" else None, "engine": args.engine, "map_source": args.map_source,
+        ("" if args.scenario == "nominal" else f"_{args.scenario}") + ("" if args.physics == "v0" else f"_{args.physics}") + \
+        ("_video" if args.video else "")
+    res = {"label": "win-isaac", "physics": args.physics, "pd_gains": args.pd_gains, "layout": args.layout, "scenario": args.scenario, "controller": args.controller, "checkpoint": str(ck) if args.controller == "ppo" else None, "engine": args.engine, "map_source": args.map_source,
            "map_hash": env.map_hash, "seeds": [args.seed0, args.seed0 + n_episodes - 1], "limits": LANDING_LIMITS,
            "settle_s": cfg.settle_s, "control_steps": steps, "summary": summarize(first) if first else None,
            "episodes": first}

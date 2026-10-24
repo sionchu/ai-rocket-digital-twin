@@ -4,10 +4,37 @@
 in NVIDIA Isaac Lab 3.0 / Isaac Sim 6.0, inspired by the cold-gas thruster package announced for the Tesla Roadster.
 Simulation only.
 
-▶ Video: [`runs/ppo_win-isaac/videos/story_v2_scenarios_layouts.mp4`](runs/ppo_win-isaac/videos/story_v2_scenarios_layouts.mp4)
-(58 s, split-screen Isaac footage: training stages, scenarios, PD vs RL, four thruster layouts)
+▶ Video: [`runs/ppo_win-isaac/videos/story_v6_tipover.mp4`](runs/ppo_win-isaac/videos/story_v6_tipover.mp4)
+(86 s: ground-start hop with ignition and flight-computer outputs, strong-wind landing, four thruster layouts,
+PD vs RL, a real tip-over, results)
 
-## Results (`win-isaac`, 60 landings per case)
+## Results, physics v1 (`win-isaac`, 60 landings per case)
+
+Physics v1 adds aerodynamics with a wind profile, propellant burn that changes mass, CoM and inertia, and the
+OpenFOAM CFD thrust map ([ADR-0011](docs/decisions/ADR-0011-physics-v1.md)). PD gains were re-tuned per scenario.
+
+| Scenario | PD | PD re-tuned | RL trained on nominal | RL trained for the scenario |
+|---|---|---|---|---|
+| Nominal | 60 | 60 | 60 | – |
+| Strong gusty wind | 41 | 44 | 27 | **56** |
+| RCS thruster failure (unannounced) | **60** | 60 | 26 | 35 |
+| Sensor noise + 20 ms latency | **60** | 60 | 60 | 6 (fine-tune failed) |
+| Start 25–45 m from the pad | 37 | **60** | 13 | 30 |
+| Ground-start hop: ignition, hover, land on a second pad | 60 | – | – | 60 |
+
+Thruster layouts (RL, nominal): 3-engine 43, 4-engine 17, fixed engine + cold gas 41 (v0: 60 / 60 / 59).
+
+- With the more realistic physics, the scenario-trained RL policy beats PD only in strong wind. A re-tuned PD wins
+  or ties elsewhere; the RCS-failure, noise and layout fine-tunes fell short at the v0 iteration budget.
+- In the hop, both land 60/60; RL uses about 19 % less propellant (67.4 vs 83.3 kg). Ignition delay (0.3 s) and
+  thrust rise time (0.2 s) are assumptions ([ADR-0012](docs/decisions/ADR-0012-ground-start-hop.md)).
+- Not modelled: landing-gear damage, plume–ground interaction, combustion. The flame is an NVIDIA Flow
+  visualisation of the 1D nozzle output.
+
+Details: [`runs/ppo_win-isaac/eval_v1/README.md`](runs/ppo_win-isaac/eval_v1/README.md),
+[`PROJECT_LEDGER.md`](PROJECT_LEDGER.md).
+
+## Results, physics v0 (fixed mass, no aerodynamics)
 
 | Scenario | Fixed-gain PD | RL trained on nominal | RL trained for the scenario |
 |---|---|---|---|
@@ -26,8 +53,7 @@ Thruster layouts (RL, nominal): gimballed engine + roll RCS 60, 3-engine differe
   no hardware. PD was not re-tuned per scenario; layouts b–d have no PD baseline. The flame in the videos is
   an NVIDIA Flow visualisation of the 1D nozzle output, not a combustion simulation.
 
-Details: [`docs/decisions/ADR-0010-scenarios-layouts.md`](docs/decisions/ADR-0010-scenarios-layouts.md),
-[`PROJECT_LEDGER.md`](PROJECT_LEDGER.md).
+Details: [`docs/decisions/ADR-0010-scenarios-layouts.md`](docs/decisions/ADR-0010-scenarios-layouts.md).
 
 ---
 

@@ -34,8 +34,10 @@ from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils.configclass import configclass
 
+from rocket_dt.dynamics.aero import AeroModel, aero_wrench
 from rocket_dt.dynamics.frames import G0
 from rocket_dt.dynamics.mass import MassModel
+from rocket_dt.dynamics.varmass import compensated_wrench
 from rocket_dt.evaluation.simulate import LANDING_LIMITS
 from rocket_dt.isaac_env.torch_models import TorchActuators, TorchPerfMap, gimbal_direction, isa_pressure
 from rocket_dt.isaac_env.layouts import layout_spec
@@ -63,8 +65,10 @@ NOZZLE_VIS_SCALE = 4.0  # visual only: real exit radius is 79-103 mm on a 1.2 m 
 NOZZLE_COLOR = {"conical_A": (0.45, 0.62, 0.95), "bell_B": (0.95, 0.66, 0.25), "bell_C": (0.95, 0.45, 0.42)}
 
 
-def build_vehicle_usd(path: Path, engine_name: str, layout: str = "gimbal_rcs") -> dict:
-    """Write a one-body USD: RigidBody + MassAPI (full propellant) + visual hull + 4 foot sphere colliders."""
+def build_vehicle_usd(path: Path, engine_name: str, layout: str = "gimbal_rcs", visual: str = "v0") -> dict:
+    """Write a one-body USD: RigidBody + MassAPI (full propellant) + visual hull + 4 foot sphere colliders.
+    visual "v1": the v0 placeholder geometry is replaced by the assets/vtvl_v1 vehicle (visual only; physics,
+    colliders and mass are identical), and the collider spheres are hidden."""
     from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics
 
     veh = load_vehicle(REPO / "configs/vehicle_v0.yaml").with_engine(engine_name)
@@ -136,6 +140,14 @@ def build_vehicle_usd(path: Path, engine_name: str, layout: str = "gimbal_rcs") 
         leg.AddTranslateOp().Set(mid)
         rot = Gf.Rotation(Gf.Vec3d(0, 0, 1), Gf.Vec3d(f[0] / 2, f[1] / 2, -1.5))
         leg.AddOrientOp().Set(Gf.Quatf(rot.GetQuat()))
+    if visual == "v1":
+        from rocket_dt.isaac_env.visual_assets import author_vehicle_visuals
+        for prim in list(stage.GetPrimAtPath("/Vehicle").GetChildren()):
+            if prim.GetName().startswith("foot_"):
+                UsdGeom.Imageable(prim).MakeInvisible()
+            else:
+                stage.RemovePrim(prim.GetPath())
+        author_vehicle_visuals(stage, "/Vehicle", layout, engine_name)
     stage.GetRootLayer().Save()
     return {"mass_kg": float(ms.mass_kg), "com_body_m": ms.com_body_m.tolist(),
             "inertia_diag": np.diag(ms.inertia_com_body).tolist(), "foot_radius_m": r_foot,
@@ -176,7 +188,7 @@ class VtvlEnvCfg(DirectRLEnvCfg):
 
     # engine layout (layouts.py) and scenario (ADR-0010); defaults reproduce the nominal v0 env exactly
     layout: str = "gimbal_rcs"
-    scenario: str = "nominal"  # nominal | wind | rcs_fail | noise | lateral
+    scenario: str = "nominal"  # nominal | wind | rcs_fail | noise | lateral | hop
     wind_max_n: float = 300.0  # nominal: randomized_scenarios; "wind" scenario raises it
     gust_amp: float = 0.0  # relative gust amplitude (sinusoid), "wind" scenario
     noise_pos_m: float = 0.0  # "noise" scenario: measurement noise (1 sigma) and 1-step latency
@@ -185,6 +197,32 @@ class VtvlEnvCfg(DirectRLEnvCfg):
     noise_rate_rad_s: float = 0.0
     obs_delay_steps: int = 0
     lateral_r_m: tuple = (0.0, 8.0)  # start radius range; "lateral" scenario uses (25, 45)
+    # physics v1 (ADR-0011); defaults reproduce v0. aero: quasi-steady aero (configs/aero_v0.yaml) and the wind
+    # becomes a wind velocity at the reference height (the v0 force maps to the speed giving that force);
+    # variable_mass: true mass/CoM/inertia from the burned propellant via a compensating wrench on the fixed body
+    aero: bool = False
+    variable_mass: bool = False
+    # look only: "v1" = assets/vtvl_v1 vehicle, concrete pad + lakebed per env, baked sky dome + sun
+    visual: str = "v0"
+    visual_sky_intensity: float = 350.0  # tuned by eye on the RTX headless capture (1000 overexposed the sky)
+    visual_sun_intensity: float = 2500.0
+    # ground start + ignition ("hop" scenario, ADR-0012). The sequencer commands ignition at ign_cmd_s; main thrust
+    # (and propellant flow) is 0 until ign_cmd_s + ign_delay_s, then rises as 1 - exp(-t/ign_tau_s). The delay and
+    # rise time are assumptions (no engine test data), not measured values.
+    ignition: bool = False
+    ign_cmd_s: float = 0.5
+    ign_delay_s: float = 0.3
+    ign_tau_s: float = 0.2
+    # hop mission: lift off the pad at the env origin, hold a hover point above a second pad, then land on it.
+    # The hover counts once the CoM stays within hop_pos_tol_m and hop_vel_tol_m_s for hop_hold_s; the target
+    # switches to the landing pad then (or at hop_switch_max_s without the hover, which fails the mission).
+    hop_h_m: tuple = (15.0, 25.0)
+    hop_r_m: tuple = (6.0, 14.0)
+    hop_hold_s: float = 1.0
+    hop_pos_tol_m: float = 1.5
+    hop_vel_tol_m_s: float = 1.0
+    hop_switch_max_s: float = 25.0
+    airborne_h_m: float = 1.0  # foot height that arms touchdown detection after a ground start
 
     # episode logic
     terminate_at_touchdown: bool = True  # training: end at first contact; evaluation: False + settle
@@ -223,6 +261,8 @@ class VtvlEnvCfg(DirectRLEnvCfg):
             self.obs_delay_steps = 1
         elif sc == "lateral":
             self.lateral_r_m, self.oob_horizontal_m = (25.0, 45.0), 80.0
+        elif sc == "hop":
+            self.ignition = True
         elif sc not in ("nominal", "rcs_fail"):
             raise ValueError(f"unknown scenario {sc}")
 
@@ -270,7 +310,7 @@ class VtvlEnv(DirectRLEnv):
         # one USD per process: concurrent Isaac processes rewriting a shared file died silently at startup
         usd = Path(cfg.robot.spawn.usd_path)
         cfg.robot.spawn.usd_path = str(usd.with_name(f"{usd.stem}_{os.getpid()}{usd.suffix}"))
-        self.asset_info = build_vehicle_usd(Path(cfg.robot.spawn.usd_path), cfg.engine, cfg.layout)
+        self.asset_info = build_vehicle_usd(Path(cfg.robot.spawn.usd_path), cfg.engine, cfg.layout, cfg.visual)
         super().__init__(cfg, render_mode, **kwargs)
         if getattr(self, "_physics_handles_decimation", False):
             raise NotImplementedError("per-substep actuator/propulsion update requires physics-side decimation off")
@@ -297,7 +337,18 @@ class VtvlEnv(DirectRLEnv):
         self.eng_pos_b = torch.tensor(self.spec.engine_pos_b, **f)
         self.eng_share = torch.tensor(self.spec.engine_share, **f)
         self.mass = float(ms.mass_kg)
-        self.com_b = torch.tensor(ms.com_body_m, **f)
+        self.com_b = torch.tensor(ms.com_body_m, **f)  # physics body CoM (full propellant, fixed)
+        self.mm = mm
+        self.i0 = torch.tensor(np.diag(ms.inertia_com_body), **f)
+        self.unit = tuple(torch.eye(3, **f))
+        self.com_true_b = self.com_b.expand(n, 3).clone()  # true CoM (= com_b unless variable_mass)
+        self.d_dot_b = torch.zeros(n, 3, **f)  # d/dt of (true CoM - body CoM), body frame
+        self.mass_true = torch.full((n,), self.mass, **f)
+        self.aero_k = None
+        if cfg.aero:
+            self.aero_model = AeroModel.load(REPO / "configs/aero_v0.yaml", self.veh.mass.structure_radius_m,
+                                             self.veh.mass.structure_length_m)
+            self.aero_k = self.aero_model.arrays(lambda a: torch.tensor(a, **f))
         self.pivot_b = torch.tensor(self.veh.layout.main_engine.gimbal_pivot_body_m, **f)
         feet = torch.tensor(self.veh.gear.foot_positions_body_m, **f).reshape(-1, 3)
         self.feet_b = feet
@@ -317,11 +368,19 @@ class VtvlEnv(DirectRLEnv):
         self.fuel_used = z()
         self.phi = z()
         self.max_tilt = z()
-        core = (1 / 10,) * 3 + (1 / 5,) * 3 + (1.0,) * 3 + (1.0,) * 3 + (1 / 50, 1 / 5, 1.0, 1.0)
+        self.k_ign = torch.ones(n, **f)  # main-engine thrust fraction from the ignition transient (1 = running)
+        self.hop = cfg.scenario == "hop"
+        b = lambda v: torch.full((n,), v, dtype=torch.bool, device=dev)  # noqa: E731
+        self.airborne, self.hover_done, self._switched = b(True), b(not self.hop), b(False)
+        self.hop_phase = torch.full((n,), 0 if self.hop else 1, dtype=torch.long, device=dev)  # 0 hover, 1 land
+        self.hop_pt = torch.zeros(n, 3, **f)  # hover point; the landing pad is below it
+        self.hover_t, self.hop_switch_t = z(), z()
+        core =(1 / 10,) * 3 + (1 / 5,) * 3 + (1.0,) * 3 + (1.0,) * 3 + (1 / 50, 1 / 5, 1.0, 1.0)
         self.obs_scale = torch.tensor(core + (1.0,) * (self.spec.obs_dim - len(core)), **f)
         self.episode_results: list[dict] = []  # filled at reset (evaluation reads it)
         self._first_episode_done = torch.zeros(n, dtype=torch.bool, device=dev)
         self._episode_count = torch.zeros(n, dtype=torch.long, device=dev)
+        self._update_mass_props()
 
     # ---------------------------------------------------------------- scene
     def _setup_scene(self):
@@ -333,6 +392,33 @@ class VtvlEnv(DirectRLEnv):
         self.scene.clone_environments(copy_from_source=False)
         if self.device == "cpu":
             self.scene.filter_collisions(global_prim_paths=[self.cfg.terrain.prim_path])
+        if self.cfg.visual == "v1":
+            from rocket_dt.isaac_env.visual_assets import PAD_USD, SKY_HDR, SKY_SUN_AZIMUTH_DEG, SKY_SUN_ELEVATION_DEG
+            pad = sim_utils.UsdFileCfg(usd_path=str(PAD_USD))
+            pad.func("/World/envs/env_.*/Pad", pad)
+            # the physics ground plane stays as collider only; its grid visual z-fights with the lakebed at z = 0
+            from pxr import UsdGeom
+            stage = sim_utils.get_current_stage()
+            for prim in stage.GetPrimAtPath(self.cfg.terrain.prim_path).GetChildren():
+                UsdGeom.Imageable(prim).MakeInvisible()
+            # one landing site: the other envs keep only their concrete pad (overlapping lakebeds z-fight)
+            for i in range(1, self.scene.cfg.num_envs):
+                for part in ("ground", "ridges", "props"):
+                    prim = stage.GetPrimAtPath(f"/World/envs/env_{i}/Pad/{part}")
+                    if prim.IsValid():
+                        UsdGeom.Imageable(prim).MakeInvisible()
+            dome = sim_utils.DomeLightCfg(intensity=self.cfg.visual_sky_intensity, texture_file=str(SKY_HDR),
+                                          texture_format="latlong")
+            dome.func("/World/Light", dome)
+            # sun along the baked sky's sun direction: rotate the light's -Z onto -(sun direction)
+            e, a = math.radians(SKY_SUN_ELEVATION_DEG), math.radians(SKY_SUN_AZIMUTH_DEG)
+            to_sun = np.array([math.cos(e) * math.cos(a), math.cos(e) * math.sin(a), math.sin(e)])
+            axis = np.cross([0.0, 0.0, 1.0], to_sun)
+            ang = math.acos(float(np.clip(to_sun[2], -1, 1)))
+            axis = axis / np.linalg.norm(axis)
+            sun = sim_utils.DistantLightCfg(intensity=self.cfg.visual_sun_intensity, color=(1.0, 0.93, 0.82), angle=0.53)
+            sun.func("/World/Sun", sun, orientation=(math.cos(ang / 2), *(axis * math.sin(ang / 2))))
+            return
         light = sim_utils.DomeLightCfg(intensity=self.cfg.sky_intensity, color=tuple(self.cfg.sky_color))
         light.func("/World/Light", light)
         if self.cfg.sun_intensity > 0:  # white key light so a tinted sky does not tint the vehicle
@@ -341,11 +427,17 @@ class VtvlEnv(DirectRLEnv):
 
     # ---------------------------------------------------------------- state helpers
     def _state(self):
+        """True CoM position/velocity (env frame), quaternion xyzw, body rates."""
         d = self.robot.data
         p = d.root_com_pos_w.torch - self.scene.env_origins
         q = d.root_link_quat_w.torch  # xyzw
         v = d.root_com_lin_vel_w.torch
         w_b = d.root_com_ang_vel_b.torch
+        if self.cfg.variable_mass:  # PhysX tracks the fixed full-propellant CoM; shift to the true CoM
+            rot = _rotmat_xyzw(q)
+            dd = self.com_true_b - self.com_b
+            p = p + (rot @ dd[..., None]).squeeze(-1)
+            v = v + (rot @ (torch.linalg.cross(w_b, dd) + self.d_dot_b)[..., None]).squeeze(-1)
         return p, q, v, w_b
 
     @staticmethod
@@ -353,7 +445,7 @@ class VtvlEnv(DirectRLEnv):
         return torch.acos(rot[:, 2, 2].clamp(-1.0, 1.0))
 
     def _foot_bottom_z(self, p, rot):
-        r = self.feet_b[None] - self.com_b[None, None]  # (1, 4, 3)
+        r = self.feet_b[None] - self.com_true_b[:, None]  # (n, 4, 3)
         return p[:, None, 2] + (rot[:, None] @ r[..., None]).squeeze(-1)[..., 2]
 
     # ---------------------------------------------------------------- actions
@@ -378,8 +470,11 @@ class VtvlEnv(DirectRLEnv):
         dt = self.physics_dt
         p, q, v, w_b = self._state()
         rot = _rotmat_xyzw(q)
-        # first contact: record the pre-impact state and cut the engine (simulate.py rule)
-        new_td = (~self.td) & (self._foot_bottom_z(p, rot).min(dim=1).values <= self.cfg.touchdown_height_m)
+        # first contact: record the pre-impact state and cut the engine (simulate.py rule); after a ground start
+        # touchdown is armed only once the feet have cleared airborne_h_m
+        foot_z = self._foot_bottom_z(p, rot).min(dim=1).values
+        self.airborne |= foot_z > self.cfg.airborne_h_m
+        new_td = (~self.td) & self.airborne & (foot_z <= self.cfg.touchdown_height_m)
         if new_td.any():
             self.td |= new_td
             self.td_t = torch.where(new_td, self.t, self.td_t)
@@ -393,8 +488,12 @@ class VtvlEnv(DirectRLEnv):
         n, E = self.num_envs, self.spec.n_engines
         f_e, md_e, val_e = self.map.lookup(thrs.reshape(-1), pa.repeat_interleave(E),
                                            self.engine_idx.repeat_interleave(E))
-        f_e = f_e.reshape(n, E) * self.eng_share
-        md_e = md_e.reshape(n, E) * self.eng_share
+        if self.cfg.ignition:  # start transient: no thrust before ignition, then first-order rise (assumed)
+            tr = self.t - (self.cfg.ign_cmd_s + self.cfg.ign_delay_s)
+            self.k_ign = torch.where(tr > 0, 1.0 - torch.exp(-tr.clamp(min=0.0) / self.cfg.ign_tau_s),
+                                     torch.zeros_like(tr))
+        f_e = f_e.reshape(n, E) * self.eng_share * self.k_ign[:, None]
+        md_e = md_e.reshape(n, E) * self.eng_share * self.k_ign[:, None]
         valid = val_e.reshape(n, E).all(dim=1)
         main_on = self.act.engine_on & (self.m_prop > 0)
         f_e = torch.where(main_on[:, None], f_e, torch.zeros_like(f_e))
@@ -410,26 +509,57 @@ class VtvlEnv(DirectRLEnv):
         force_b = torch.cat([f_e[..., None] * dirs,
                              rcs_frac[..., None] * (self.act.fmax[:, None] * self.act.dir_b)[None]], dim=1)
         pos_b = torch.cat([self.eng_pos_b.expand(n, E, 3), self.act.pos_b.expand(n, -1, 3)], dim=1)
-        if self.cfg.gust_amp > 0:  # sinusoidal gust on the constant wind
+        if self.cfg.gust_amp > 0:  # sinusoidal gust on the constant wind (aero: speed x sqrt, so force x g)
             g = 1.0 + self.cfg.gust_amp * torch.sin(2 * math.pi * self.t / self.gust_period + self.gust_phase)
-            self.wind_w = self.wind_base * g[:, None]
-        F, tau = batched_wrench_torch(force_b, pos_b, self.com_b.expand(n, 3))
+            self.wind_w = self.wind_base * (g.clamp(min=0.0).sqrt() if self.cfg.aero else g)[:, None]
+        F, tau = batched_wrench_torch(force_b, pos_b, self.com_true_b)
         # last physics step, for telemetry/visualisation only
         self.last_f_main, self.last_valid, self.last_rcs_frac, self.last_pa = f_main, valid & main_on, rcs_frac, pa
         self.last_F_b, self.last_tau_b, self.last_gimbal = F[:, 0], tau[:, 0], gim
+        mdot_rcs = (rcs_frac * self.act.mdot_full).sum(1)
         comp = self.robot.permanent_wrench_composer
-        comp.set_forces_and_torques_index(forces=F, torques=tau, positions=None, is_global=False)
-        comp.add_forces_and_torques_index(forces=self.wind_w[:, None], positions=None, is_global=True)
+        if not (self.cfg.aero or self.cfg.variable_mass):  # v0 path, unchanged
+            comp.set_forces_and_torques_index(forces=F, torques=tau, positions=None, is_global=False)
+            comp.add_forces_and_torques_index(forces=self.wind_w[:, None], positions=None, is_global=True)
+        else:
+            f_b, t_b = F[:, 0], tau[:, 0]
+            wind_force_w = self.wind_w
+            if self.aero_k is not None:  # wind_w holds the reference-height wind velocity here
+                fa, ta = aero_wrench(self.aero_k, p[:, 2], rot, v, w_b, self.com_true_b, self.wind_w)
+                f_b, t_b, wind_force_w = f_b + fa, t_b + ta, torch.zeros_like(self.wind_w)
+                self.last_F_aero_b = fa
+            f_w = (rot @ f_b[..., None]).squeeze(-1) + wind_force_w
+            if self.cfg.variable_mass:
+                i_true = torch.stack([self.i_true[0], self.i_true[0], self.i_true[1]], 1)
+                cz_dot, cz_ddot = self.mm.com_z_rates(self.m_prop, self.m_rcs, mdot_main, mdot_rcs)
+                z3 = torch.zeros_like(cz_dot)
+                self.d_dot_b = torch.stack([z3, z3, cz_dot], 1)
+                f_w, t_b, _ = compensated_wrench(f_w, t_b, w_b, rot, self.mass_true, i_true,
+                                                 self.com_true_b - self.com_b, self.mass, self.i0, self.unit,
+                                                 self.d_dot_b, torch.stack([z3, z3, cz_ddot], 1))
+            f_body = (rot.transpose(1, 2) @ f_w[..., None]).squeeze(-1)
+            comp.set_forces_and_torques_index(forces=f_body[:, None], torques=t_b[:, None], positions=None,
+                                              is_global=False)
         self.m_prop = (self.m_prop - mdot_main * dt).clamp(min=0.0)
-        self.m_rcs = (self.m_rcs - (rcs_frac * self.act.mdot_full).sum(1) * dt).clamp(min=0.0)
+        self.m_rcs = (self.m_rcs - mdot_rcs * dt).clamp(min=0.0)
+        self._update_mass_props()
         self.fuel_used += mdot_main * dt
         self.t += dt
+
+    def _update_mass_props(self):
+        """True mass properties from the remaining propellant (variable_mass only)."""
+        if not self.cfg.variable_mass:
+            return
+        m, cz, ixx, izz = self.mm.batched(self.m_prop, self.m_rcs)
+        self.mass_true = m
+        self.i_true = (ixx, izz)
+        self.com_true_b = torch.stack([torch.zeros_like(cz), torch.zeros_like(cz), cz], 1)
 
     # ---------------------------------------------------------------- obs / reward / dones
     def _available_thrust_norm(self, p):
         fmax, _, _ = self.map.lookup(torch.full_like(p[:, 2], self.act.tmax), isa_pressure(p[:, 2].clamp(min=0.0)),
                                      self.engine_idx)
-        return fmax / (self.mass * G0)
+        return fmax / (self.mass_true * G0)
 
     def measured_state(self, advance: bool = False):
         """State as seen by the controller: true state, or (noise scenario) noisy and delayed by obs_delay_steps.
@@ -474,8 +604,16 @@ class VtvlEnv(DirectRLEnv):
             v_h_term = (v[:, :2] - v_ref).norm(dim=1)
         else:
             v_h_term = v[:, :2].norm(dim=1)
-        return -(torch.abs(v[:, 2] - vz_ref) / 2.0 + e_h.norm(dim=1) / self.cfg.phi_pos_m
-                 + v_h_term / 1.0 + self._tilt(rot) / self.cfg.phi_tilt_rad + w_b.norm(dim=1) / 0.5)
+        phi = -(torch.abs(v[:, 2] - vz_ref) / 2.0 + e_h.norm(dim=1) / self.cfg.phi_pos_m
+                + v_h_term / 1.0 + self._tilt(rot) / self.cfg.phi_tilt_rad + w_b.norm(dim=1) / 0.5)
+        if self.hop:  # hover phase: 3-D approach to the hover point with the same PD-style velocity law (<= 3 m/s)
+            e = p - self.hop_pt
+            v_ref = -(0.6 / 1.4) * e
+            v_ref = v_ref * (3.0 / v_ref.norm(dim=1, keepdim=True).clamp(min=3.0))
+            phi_h = -(e.norm(dim=1) / self.cfg.phi_pos_m + (v - v_ref).norm(dim=1) / 1.0
+                      + self._tilt(rot) / self.cfg.phi_tilt_rad + w_b.norm(dim=1) / 0.5)
+            phi = torch.where(self.hop_phase == 0, phi_h, phi)
+        return phi
 
     def _get_dones(self):
         p, q, v, w_b = self._state()
@@ -489,7 +627,20 @@ class VtvlEnv(DirectRLEnv):
         else:
             self._settled = self.td & (self.t - self.td_t >= self.cfg.settle_s)
         self._final_tilt = tilt
-        terminated = self._tip | self._oob | self._settled
+        self._switched = torch.zeros_like(self.td)
+        if self.hop:  # hover hold, then the target moves down to the landing pad
+            near = ((p - self.hop_pt).norm(dim=1) <= self.cfg.hop_pos_tol_m) & (v.norm(dim=1) <= self.cfg.hop_vel_tol_m_s)
+            self.hover_t = torch.where((self.hop_phase == 0) & near, self.hover_t + self.step_dt,
+                                       torch.zeros_like(self.hover_t))
+            held = self.hover_t >= self.cfg.hop_hold_s
+            self.hover_done |= held
+            self._switched = (self.hop_phase == 0) & (held | (self.t >= self.cfg.hop_switch_max_s))
+            if self._switched.any():
+                self.hop_phase[self._switched] = 1
+                self.hop_switch_t = torch.where(self._switched, self.t, self.hop_switch_t)
+                self._target[self._switched] = self.hop_pt[self._switched] * torch.tensor([1.0, 1.0, 0.0],
+                                                                                          device=self.device)
+        terminated =self._tip | self._oob | self._settled
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         self._timeout = time_out & ~terminated
         return terminated, self._timeout
@@ -500,7 +651,7 @@ class VtvlEnv(DirectRLEnv):
                 & (self.td_tilt <= L["tilt_max_rad"]) & (self.td_pos <= L["pos_err_max_m"]))
 
     def _success(self):
-        ok = self._td_ok() & self._settled & ~self._tip
+        ok = self._td_ok() & self._settled & ~self._tip & self.hover_done
         if not self.cfg.terminate_at_touchdown:
             ok &= self._final_tilt <= LANDING_LIMITS["final_tilt_max_rad"]
         return ok
@@ -510,7 +661,8 @@ class VtvlEnv(DirectRLEnv):
         rot = _rotmat_xyzw(q)
         phi = self._potential(p, v, rot, w_b)
         airborne_prev = (self.episode_length_buf > 1)
-        r = torch.where(airborne_prev, self.cfg.rew_shaping_scale * (phi - self.phi), torch.zeros_like(phi))
+        r = torch.where(airborne_prev & ~self._switched, self.cfg.rew_shaping_scale * (phi - self.phi),
+                        torch.zeros_like(phi))  # the hover->landing target switch is a potential jump, not progress
         if not self.cfg.terminate_at_touchdown:  # no shaping while the vehicle settles after cutoff
             r = torch.where(self.td & ~self._settled, torch.zeros_like(r), r)
         self.phi = phi
@@ -554,7 +706,9 @@ class VtvlEnv(DirectRLEnv):
                  "final_tilt_deg": float(torch.rad2deg(self._final_tilt[i])),
                  "max_tilt_deg": float(torch.rad2deg(self.max_tilt[i])), "fuel_used_kg": float(self.fuel_used[i]),
                  "map_invalid_steps": int(self.invalid_steps[i]), "physics_valid": bool(self.invalid_steps[i] == 0),
-                 "duration_s": float(self.t[i])} for k, i in enumerate(ids.tolist())]
+                 "duration_s": float(self.t[i]),
+                 **({"hover_done": bool(self.hover_done[i]), "hop_switch_t": float(self.hop_switch_t[i]),
+                     "hop_target": self.hop_pt[i].tolist()} if self.hop else {})} for k, i in enumerate(ids.tolist())]
 
     def _reset_idx(self, env_ids):
         if env_ids is None or len(env_ids) == self.num_envs:
@@ -578,6 +732,8 @@ class VtvlEnv(DirectRLEnv):
                     "Episode_Termination/oob": self._oob[done_ids].float().mean().item(),
                     "Episode_Termination/timeout": self._timeout[done_ids].float().mean().item(),
                     "Metrics/physics_valid_rate": (self.invalid_steps[done_ids] == 0).float().mean().item()}
+                if self.hop:
+                    self.extras["log"]["Metrics/hover_rate"] = self.hover_done[done_ids].float().mean().item()
                 if len(self.engine_names) > 1:
                     for k, name in enumerate(self.engine_names):
                         sel = self.engine_idx[done_ids] == k
@@ -601,6 +757,8 @@ class VtvlEnv(DirectRLEnv):
             gper = torch.tensor([s.get("gust_period_s", 4.0) for s in sc], device=dev)
             gph = torch.tensor([s.get("gust_phase", 0.0) for s in sc], device=dev)
             fail_i = torch.tensor([s.get("rcs_failed", -1) for s in sc], device=dev)
+            if self.hop:
+                hop_pt = torch.tensor([s["hop_target"] for s in sc], device=dev)
         else:  # same distribution as evaluation.experiments.randomized_scenarios (torch RNG, not the seeds)
             u = lambda lo, hi: torch.rand(n, device=dev) * (hi - lo) + lo  # noqa: E731
             a = u(0, 2 * math.pi)
@@ -616,6 +774,21 @@ class VtvlEnv(DirectRLEnv):
             gper, gph = u(3.0, 6.0), u(0, 2 * math.pi)
             fail_i = (torch.randint(self.act.k if self.cfg.scenario == "rcs_fail" else 1, (n,), device=dev)
                       if self.cfg.scenario == "rcs_fail" else torch.full((n,), -1, device=dev))
+            if self.hop:
+                hb, hr = u(0, 2 * math.pi), u(*self.cfg.hop_r_m)
+                hop_pt = torch.stack([hr * torch.cos(hb), hr * torch.sin(hb), u(*self.cfg.hop_h_m)], 1)
+        if self.hop:  # standing upright on the launch pad at the env origin, at rest
+            pos = torch.zeros(n, 3, device=dev)
+            pos[:, 2] = self.td_com_z + 0.005
+            vel, ang, w_b = torch.zeros(n, 3, device=dev), torch.zeros(n, device=dev), torch.zeros(n, 3, device=dev)
+            self.hop_pt[env_ids] = hop_pt.float()
+            self._target[env_ids] = hop_pt.float()
+            self.hop_phase[env_ids] = 0
+            self.airborne[env_ids] = False
+            self.hover_done[env_ids] = False
+            self.hover_t[env_ids] = 0.0
+            self.hop_switch_t[env_ids] = 0.0
+            self.k_ign[env_ids] = 0.0
         q = _quat_axis_angle_xyzw(axis, ang)
         rot = _rotmat_xyzw(q)
         p_w = pos + self.scene.env_origins[env_ids]
@@ -623,6 +796,9 @@ class VtvlEnv(DirectRLEnv):
         self.robot.write_root_link_pose_to_sim_index(root_pose=torch.cat([link, q], 1), env_ids=env_ids)
         w_w = (rot @ w_b[..., None]).squeeze(-1)
         self.robot.write_root_com_velocity_to_sim_index(root_velocity=torch.cat([vel, w_w], 1), env_ids=env_ids)
+        if self.cfg.aero:  # v0 wind force -> reference-height wind speed giving that force (ADR-0011)
+            fm = wind.norm(dim=1, keepdim=True)
+            wind = wind / fm.clamp(min=1e-9) * float(self.aero_model.wind_speed_for_force(1.0)) * fm.sqrt()
         self.wind_w[env_ids] = wind
         self.wind_base[env_ids] = wind
         self.gust_period[env_ids] = gper.float()
@@ -640,6 +816,8 @@ class VtvlEnv(DirectRLEnv):
         self._meas_prev = None
         self.m_prop[env_ids] = self.prop0
         self.m_rcs[env_ids] = self.rcs0
+        self.d_dot_b[env_ids] = 0.0  # reset velocity is written for the body CoM = true CoM at full load
+        self._update_mass_props()
         self.t[env_ids] = 0.0
         self.td[env_ids] = False
         for b in (self.td_t, self.td_vz, self.td_vh, self.td_tilt, self.td_pos, self.fuel_used, self.max_tilt):

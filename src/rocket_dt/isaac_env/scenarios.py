@@ -9,6 +9,8 @@ per scenario:
   noise     unchanged initial state; the env adds measurement noise and 1-step (20 ms) latency (torch RNG,
             seeded by the evaluation script)
   lateral   start radius U(25, 45) m (uniform in the annulus) instead of <= 8 m, random bearing
+  hop       ground start on the launch pad (the env overrides the initial state), engine ignition, hover point
+            at height U(15, 25) m above a landing pad at radius U(6, 14) m, random bearing; wind as nominal
 """
 from __future__ import annotations
 
@@ -23,7 +25,7 @@ from rocket_dt.evaluation.experiments import randomized_scenarios
 from rocket_dt.evaluation.simulate import Scenario
 
 REPO = Path(__file__).resolve().parents[3]
-SCENARIOS = ("nominal", "wind", "rcs_fail", "noise", "lateral")
+SCENARIOS = ("nominal", "wind", "rcs_fail", "noise", "lateral", "hop")
 KEYS = ("com_position_w", "velocity_w", "tilt_axis", "tilt_rad", "omega_b", "disturbance_force_w")
 
 
@@ -45,6 +47,9 @@ def eval_scenarios(name: str, n: int, seed0: int, n_rcs: int = 4) -> list[dict]:
             r = math.sqrt(rng.uniform((25 / 45) ** 2, 1.0)) * 45
             th = rng.uniform(0, 2 * math.pi)
             d["com_position_w"] = [float(r * math.cos(th)), float(r * math.sin(th)), d["com_position_w"][2]]
+        elif name == "hop":
+            r, th = rng.uniform(6.0, 14.0), rng.uniform(0, 2 * math.pi)
+            d["hop_target"] = [float(r * math.cos(th)), float(r * math.sin(th)), float(rng.uniform(15.0, 25.0))]
         d["seed"] = sc.seed
         out.append(d)
     return out

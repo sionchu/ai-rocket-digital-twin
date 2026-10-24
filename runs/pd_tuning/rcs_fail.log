@@ -1,0 +1,5 @@
+{"iter": 0, "best_score": 8.058444554936335, "mean_score": 5.794550419537027, "best_success": 8, "elapsed_s": 182.24406480789185}
+{"iter": 1, "best_score": 8.061691527243804, "mean_score": 7.13974553841567, "best_success": 8, "elapsed_s": 414.42842388153076}
+{"iter": 2, "best_score": 8.065926696412914, "mean_score": 7.561746864142303, "best_success": 8, "elapsed_s": 637.0127141475677}
+{"iter": 3, "best_score": 8.069223558802568, "mean_score": 7.980493575052699, "best_success": 8, "elapsed_s": 888.6307578086853}
+{"seeds": "1000.. and 2000..", "n": 60, "default_success": 60, "tuned_success": 60, "default_reasons": {"landed": 60}, "tuned_reasons": {"landed": 60}}

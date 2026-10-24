@@ -1,0 +1,77 @@
+{
+ "label": "cloud-v1912 (reference integrator)",
+ "scenario": "nominal",
+ "physics": "v1",
+ "map_source": "cfd",
+ "tuning_seeds": [
+  5000,
+  5007
+ ],
+ "default_gains": {
+  "kp_pos": 0.6,
+  "kd_pos": 1.4,
+  "kp_vz": 1.5,
+  "kp_att": 4.0,
+  "kd_att": 3.0,
+  "max_tilt_deg": 12.000000000000002,
+  "max_horiz_acc": 2.0,
+  "vz_slope": 0.3,
+  "vz_min": 0.8,
+  "vz_max": 6.0
+ },
+ "tuned_gains": {
+  "kp_pos": 0.6051120436264998,
+  "kd_pos": 1.5051177455320621,
+  "kp_vz": 1.5583797221658588,
+  "kp_att": 3.997628731284231,
+  "kd_att": 3.1484328504137022,
+  "max_tilt_deg": 14.266165433737578,
+  "max_horiz_acc": 1.7796820790135652,
+  "vz_slope": 0.30884245749551015,
+  "vz_min": 0.5769837799378317,
+  "vz_max": 3.7944978112335397
+ },
+ "tuned_train_success": "8/8",
+ "history": [
+  {
+   "iter": 0,
+   "best_score": 8.057698819994595,
+   "mean_score": 5.794991366833444,
+   "best_success": 8,
+   "elapsed_s": 184.56398010253906
+  },
+  {
+   "iter": 1,
+   "best_score": 8.062058447499982,
+   "mean_score": 7.223342956376409,
+   "best_success": 8,
+   "elapsed_s": 429.49983835220337
+  },
+  {
+   "iter": 2,
+   "best_score": 8.066023006520304,
+   "mean_score": 7.478782861262417,
+   "best_success": 8,
+   "elapsed_s": 655.213552236557
+  },
+  {
+   "iter": 3,
+   "best_score": 8.067839550971811,
+   "mean_score": 7.814216242842676,
+   "best_success": 8,
+   "elapsed_s": 892.4794254302979
+  }
+ ],
+ "check": {
+  "seeds": "1000.. and 2000..",
+  "n": 60,
+  "default_success": 60,
+  "tuned_success": 60,
+  "default_reasons": {
+   "landed": 60
+  },
+  "tuned_reasons": {
+   "landed": 60
+  }
+ }
+}

@@ -1,0 +1,14 @@
+# Quasi-steady aerodynamics for vehicle_v0 (ADR-0011). Coefficients are textbook assumptions, not measured:
+# - crossflow: viscous-crossflow strip theory (Allen & Perkins, NACA TR-1048), circular cylinder
+#   sectional drag coefficient ~1.2 (subcritical; Hoerner, Fluid-Dynamic Drag, ch. 3)
+# - axial: blunt base leading in a tail-first descent ~1.0 on the base area (Hoerner ch. 3, disc ~1.1);
+#   nose-first ogive ~0.3
+aero_id: aero_v0
+crossflow_cd: 1.2
+axial_cd_tail_first: 1.0
+axial_cd_nose_first: 0.3
+n_strips: 14
+nose_length_m: 1.0          # tangent ogive on top of the cylinder (same as the visual asset)
+wind_ref_height_m: 10.0     # wind speeds are quoted at this height
+wind_shear_exponent: 0.143  # power-law boundary layer (1/7), neutral atmosphere over open terrain
+wind_min_height_m: 0.5

@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from rocket_dt.dynamics.aero import AeroModel, aero_wrench
 from rocket_dt.dynamics.frames import GRAVITY_WORLD, quat_derivative, quat_normalize, quat_to_rotmat
 from rocket_dt.dynamics.mass import MassModel
 from rocket_dt.dynamics.wrench import PointForce, total_wrench_body
@@ -32,6 +33,7 @@ class StepInputs:
     mdot_rcs: float
     disturbance_force_w: np.ndarray
     disturbance_torque_b: np.ndarray
+    wind_ref_w: np.ndarray | None = None  # wind at the aero model's reference height (aero runs only)
 
 
 class ContactModel:
@@ -62,8 +64,9 @@ class ContactModel:
 
 
 class Reference6DoF:
-    def __init__(self, mass_model: MassModel, gear: LandingGear | None):
+    def __init__(self, mass_model: MassModel, gear: LandingGear | None, aero: AeroModel | None = None):
         self.mass_model = mass_model
+        self.aero = aero.arrays() if aero is not None else None
         self.contact = ContactModel(gear) if gear is not None else None
         self.last_contacts = 0
 
@@ -77,6 +80,12 @@ class Reference6DoF:
         f_b, tau_b = total_wrench_body(u.forces_body, ms.com_body_m)
         f_w = rot @ f_b + ms.mass_kg * GRAVITY_WORLD + u.disturbance_force_w
         tau_b = tau_b + u.disturbance_torque_b
+        if self.aero is not None:
+            wind = np.zeros(3) if u.wind_ref_w is None else np.asarray(u.wind_ref_w, float)
+            fa_b, ta_b = aero_wrench(self.aero, x[IDX_P][2:3], rot[None], x[IDX_V][None], w[None],
+                                     ms.com_body_m[None], wind[None])
+            f_w += rot @ fa_b[0]
+            tau_b += ta_b[0]
         if self.contact is not None:
             fc_w, tc_b, _ = self.contact.forces(x[IDX_P], x[IDX_V], rot, w, ms.com_body_m)
             f_w += fc_w

@@ -1,0 +1,43 @@
+﻿C:\dev\IsaacLab\isaaclab.bat : [WARNING] _isaac_sim is present but _isaac_sim\setup_conda_env.bat is missing; Isaac Sim
+ env vars not exported. 
+At line:1 char:704
++ ... ","wind") { C:\dev\IsaacLab\isaaclab.bat -p $p --scenario $s --out "$ ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([WARNING] _isaa... not exported. :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[WARNING] Re-extract the Isaac Sim Windows zip if you intend to use the bundled binary. 
+The '--headless' CLI argument is deprecated. Omit '--viz' for default headless. If config visualizers are enabled and y
+ou want to force headless, use '--viz none'.
+[ISAACLAB] AppLauncher initialization complete
+[INFO]: Base environment:
+	Environment device    : cuda:0
+	Environment seed      : None
+	Physics step-size     : 0.005
+	Rendering step-size   : 0.02
+	Environment step-size : 0.02
+[INFO]: libcarb.so unavailable — Fabric notice suspension disabled (Linux x86_64 only)
+[INFO]: Registered backend 'physx' for factory RigidObject.
+C:\Users\getch\AppData\Local\Temp\claude\D--Workspace\09d07e14-3aed-4d5c-8b81-7458a6a71479\scratchpad\probe_v1.py:22: D
+eprecationWarning: The `root_state_w` property will be deprecated in IsaacLab 4.0. Please use `root_link_pose_w` and `r
+oot_com_vel_w` instead.
+  st = env.robot.data.root_state_w if hasattr(env.robot.data, "root_state_w") else None
+[INFO]: Time taken for scene creation Last: 0.930671 s, Mean: 0.930671 s, Std: 0.000000 s, N: 1
+[INFO]: Scene manager:  <class InteractiveScene>
+	Number of environments: 8
+	Environment spacing   : 40.0
+	Source prim name      : /World/envs/env_0
+	Global prim paths     : []
+	Replicate physics     : True
+[INFO]: Starting the simulation. This may take a few seconds. Please wait...
+[INFO]: Time taken for simulation start Last: 0.460729 s, Mean: 0.460729 s, Std: 0.000000 s, N: 1
+[INFO]: Completed setting up the environment...
+PROBE {"scenario": "wind", "steps": 1097, "nan_obs_steps": 0, "mass_start_kg": [1207.068603515625, 1207.066650390625, 1207.06982421875, 1207.0704345703125, 1207.0673828125, 1207.0693359375, 1207.069091796875, 1207.067626953125], "mass_min_kg": [1137.5308837890625, 1132.1309814453125, 1127.198486328125, 1117.606689453125, 1109.581787109375, 1107.8360595703125, 1135.4482421875, 1116.4102783203125], "mass_monotone_nonincreasing": false, "wind_ref_mps": [14.962169647216797, 17.983928680419922, 13.908453941345215, 16.266685485839844, 18.070390701293945, 13.799666404724121, 0.5663448572158813, 1.7741767168045044], "F_aero_median_n": [932.3013916015625, 1421.9515380859375, 879.581787109375, 1368.9384765625, 1564.4315185546875, 1404.941162109375, 20.61785888671875, 28.113563537597656], "F_aero_max_n": [2340.818115234375, 3171.673583984375, 2231.91162109375, 2639.36376953125, 3560.86328125, 2892.916748046875, 62.13916778564453, 75.26725769042969]}
+[INFO]: SimulationContext cleared
+Loading user config located at: 'c:/dev/isaaclab/_isaac_sim/kit/data/Kit/IsaacLab/3.0/user.config.json'
+2026-10-21T16:24:20Z [0ms] [Warning] [omni.ext.plugin] [ext: isaaclab_visualizers] Extensions config 'extension.toml' doesn't exist 'c:/dev/isaaclab/source/isaaclab_visualizers' or 'c:/dev/isaaclab/source/isaaclab_visualizers/config'
+2026-10-21T16:24:20Z [426ms] [Warning] [omni.usd_config.extension] Enable omni.materialx.libs extension to use MaterialX
+2026-10-21T16:24:26Z [6,013ms] [Warning] [isaaclab.envs.direct_rl_env] Seed not set for the environment. The environment creation may not be deterministic.
+2026-10-21T16:24:26Z [6,046ms] [Warning] [isaaclab_physx.physics.physx_manager] TGS solver with enable_external_forces_every_iteration=False may cause noisy velocities.
+2026-10-21T16:24:27Z [7,352ms] [Warning] [usdrt.population.plugin] Last global time was not created. Did you call setEnableUsdNoticeHandling?
+[INFO] Using Python: "C:\dev\IsaacLab\_isaac_sim\kit\python\python.exe"

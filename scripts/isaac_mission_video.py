@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--controller", choices=["ppo", "pd"], required=True)
 parser.add_argument("--checkpoint", default=None)
 parser.add_argument("--engine", default="conical_A")
-parser.add_argument("--scenario", default="nominal", choices=["nominal", "wind", "rcs_fail", "noise", "lateral"])
+parser.add_argument("--scenario", default="nominal", choices=["nominal", "wind", "rcs_fail", "noise", "lateral", "hop"])
 parser.add_argument("--layout", default="gimbal_rcs", choices=["gimbal_rcs", "tri_diff", "quad_diff", "coldgas"])
 parser.add_argument("--seed", type=int, default=1003)
 parser.add_argument("--name", required=True)
@@ -41,6 +41,11 @@ parser.add_argument("--max_steps", type=int, default=3000)
 parser.add_argument("--rcs_failed", nargs="*", default=[], help="RCS ids failed from t=0 (known to the PD allocator)")
 parser.add_argument("--engine_cam", action="store_true", help="second camera close to the nozzle (picture-in-picture)")
 parser.add_argument("--look", choices=["default", "story"], default="default")
+parser.add_argument("--physics", default="v0", choices=["v0", "v1"], help="v1 = aero + variable mass + CFD map (ADR-0011)")
+parser.add_argument("--visual", default="v0", choices=["v0", "v1"], help="v1 = assets/vtvl_v1 vehicle, pad and sky")
+parser.add_argument("--pd_gains", default=None, help="tuned PDGains JSON from scripts/tune_pd.py (controller pd)")
+parser.add_argument("--max_tilt_deg", type=float, default=None,
+                    help="video only: tip-over termination angle (env default 60) so a fall can play out to the ground")
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 app = AppLauncher(args).app
@@ -64,7 +69,7 @@ from rocket_dt.isaac_env.rocket_env import VtvlEnv, VtvlEnvCfg, _rotmat_xyzw  # 
 from rocket_dt.schemas import load_engine, load_vehicle  # noqa: E402
 
 # arrow scales [m per N]; recorded in telemetry so the HUD legend is honest
-ARROW_SCALE = {"thrust": 0.5e-3, "net": 2.0e-3, "wind": 10e-3}
+ARROW_SCALE = {"thrust": 0.5e-3, "net": 2.0e-3, "wind": 10e-3 if args.physics == "v0" else 3e-3}  # v1: total aero force
 
 
 def quat_z_to(d: np.ndarray) -> np.ndarray:
@@ -116,6 +121,11 @@ def main():
     torch.manual_seed(args.seed)  # same noise stream as scripts/ppo_eval.py --seed0 <seed> for the first env
     cfg = VtvlEnvCfg()
     cfg.engine = args.engine
+    cfg.map_source = "cfd" if args.physics == "v1" else "ideal1d"
+    cfg.aero = cfg.variable_mass = args.physics == "v1"
+    cfg.visual = args.visual
+    if args.max_tilt_deg is not None:
+        cfg.max_tilt_rad = math.radians(args.max_tilt_deg)
     cfg.layout, cfg.scenario = args.layout, args.scenario
     cfg.apply_scenario()
     cfg.__post_init__()
@@ -139,7 +149,12 @@ def main():
         runner.load(str(ck))
         policy = runner.get_inference_policy(device=env.device)
     else:
-        policy = PDPolicy(env, args.engine, "ideal1d")
+        gains = None
+        if args.pd_gains:
+            sys.path.insert(0, str(REPO / "scripts"))
+            from tune_pd import gains_from
+            gains = gains_from(json.loads(Path(args.pd_gains).read_text())["tuned_gains"])
+        policy = PDPolicy(env, args.engine, cfg.map_source, gains)
     rcs_ids = [t.id for t in load_vehicle(REPO / "configs/vehicle_v0.yaml").layout.rcs]
     for rid in args.rcs_failed:
         env.act.failed_cfg[rcs_ids.index(rid)] = True  # persists through resets
@@ -195,8 +210,12 @@ def main():
     tel = {"label": "win-isaac", "plume": args.plume, "flow_tuning": flow.tuning if flow else None, "controller": args.controller, "checkpoint": args.checkpoint, "engine": args.engine,
            "seed": args.seed, "scenario": cfg.eval_scenarios[0], "map_hash": env.map_hash, "control_dt": env.step_dt,
            "frame_every": args.frame_every, "arrow_scale_m_per_n": ARROW_SCALE, "thrust_ref_n_sl_full": f_ref,
-           "mass_kg_fixed": env.mass, "td_com_z": env.td_com_z, "layout": args.layout, "scenario_name": args.scenario,
+           "mass_kg_fixed": env.mass, "td_com_z": env.td_com_z,
+           "ignition": {"cmd_s": cfg.ign_cmd_s, "delay_s": cfg.ign_delay_s, "tau_s": cfg.ign_tau_s,
+                        "note": "assumed values, no engine test data"} if cfg.ignition else None, "layout": args.layout, "scenario_name": args.scenario,
            "rcs_failed": [], "rcs_ids": [t.id for t in env.spec.rcs],
+           "physics": args.physics, "visual": args.visual, "pd_gains": args.pd_gains,
+           "max_tilt_deg_override": args.max_tilt_deg,
            "plume_mapping": "length = 0.6 + 6.0 * F/F_ref [m]; spread = clip(sqrt(Pe/Pa), 0.6, 1.8); Pe from "
                             "rocket_dt nozzle1d at logged throttle and ISA Pa. Visual representation of the 1D "
                             "nozzle output, not a combustion simulation.",
@@ -221,18 +240,24 @@ def main():
         gim = env.last_gimbal[0].cpu().numpy().astype(float)
         frac = env.last_rcs_frac[0].cpu().numpy().astype(float)
         F_b = env.last_F_b[0].cpu().numpy().astype(float)
-        wind = env.wind_w[0].cpu().numpy().astype(float)
+        wind = env.wind_w[0].cpu().numpy().astype(float)  # v0: force [N]; v1: reference-height wind velocity [m/s]
+        wind_vel = None
+        if env.cfg.aero:  # the "wind" arrow / wind_w field show the total aerodynamic force (incl. wind)
+            wind_vel, wind = wind, rot @ env.last_F_aero_b[0].cpu().numpy().astype(float)
         thrust_w = rot @ F_b
-        net_w = thrust_w + wind + np.array([0, 0, -env.mass * G0])
+        net_w = thrust_w + wind + np.array([0, 0, -float(env.mass_true[0]) * G0])
         step = {"k": k, "t": float(env.t[0]),
                 "p": p.tolist(), "v": v.tolist(), "q_xyzw": q.tolist(), "w_b": w.tolist(),
                 "tilt_deg": math.degrees(math.acos(max(-1.0, min(1.0, rot[2, 2])))),
                 "throttle": float(env.act.throttle[0]), "engine_on": bool(env.act.engine_on[0]),
                 "gimbal_rad": gim.tolist(), "rcs_frac": frac.tolist(), "f_main_n": f_main,
                 "map_valid": bool(env.last_valid[0]), "pa": float(env.last_pa[0]),
-                "m_prop": float(env.m_prop[0]),
+                "m_prop": float(env.m_prop[0]), "mass_kg": float(env.mass_true[0]),
+                "wind_vel_w": None if wind_vel is None else wind_vel.tolist(),
                 "thrust_w": thrust_w.tolist(), "wind_w": wind.tolist(), "net_w": net_w.tolist(),
-                "touchdown": bool(env.td[0]), "f_e_n": f_e.tolist(), "frame": None}
+                "touchdown": bool(env.td[0]), "f_e_n": f_e.tolist(), "frame": None,
+                "k_ign": float(env.k_ign[0]), "hop_phase": int(env.hop_phase[0]), "target_w": env._target[0].tolist(),
+                "airborne": bool(env.airborne[0])}
         # ---- markers (world frame; env origin is the world origin with num_envs = 1)
         com_w = p
         if env.spec.gimbal:
@@ -289,7 +314,8 @@ def main():
             quats.append(np.array([0.0, 0.0, 0.0, 1.0]))
             scales.append([1.0, 1.0, 1.0])
             ids.append(MARKER_IDS["rcs_failed"])
-        trans.append(np.array([0.0, 0.0, 0.011]))
+        pad_xy = env.hop_pt[0, :2].cpu().numpy().astype(float) if env.hop else np.zeros(2)  # landing pad
+        trans.append(np.array([pad_xy[0], pad_xy[1], 0.011]))
         quats.append(np.array([0.0, 0.0, 0.0, 1.0]))
         scales.append([1.0, 1.0, 1.0])
         ids.append(MARKER_IDS["pad"])

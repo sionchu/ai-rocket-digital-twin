@@ -34,10 +34,13 @@ parser.add_argument("--phi_pos_m", type=float, default=None)
 parser.add_argument("--phi_tilt_rad", type=float, default=None)
 parser.add_argument("--shaping", default=None, choices=["basic", "guided"])
 parser.add_argument("--engine_mix", nargs="+", default=None, help="e.g. conical_A bell_B bell_C")
-parser.add_argument("--scenario", default="nominal", choices=["nominal", "wind", "rcs_fail", "noise", "lateral"])
+parser.add_argument("--scenario", default="nominal", choices=["nominal", "wind", "rcs_fail", "noise", "lateral", "hop"])
 parser.add_argument("--layout", default="gimbal_rcs", choices=["gimbal_rcs", "tri_diff", "quad_diff", "coldgas"])
 parser.add_argument("--rew_td_vz_margin", type=float, default=None)
 parser.add_argument("--rew_td_vz_target", type=float, default=None)
+parser.add_argument("--physics", default="v0", choices=["v0", "v1"],
+                    help="v1 = aero + variable mass + CFD map (ADR-0011); v0 = the ADR-0009/0010 env")
+parser.add_argument("--map_source", default=None, help="ideal1d | cfd (default: ideal1d for v0, cfd for v1)")
 parser.add_argument("--resume_from", default=None, help="checkpoint to initialise from (fine-tune)")
 parser.add_argument("--save_interval", type=int, default=50)
 AppLauncher.add_app_launcher_args(parser)
@@ -96,6 +99,8 @@ def main():
     log_dir.mkdir(parents=True, exist_ok=True)
     env_cfg = VtvlEnvCfg()
     env_cfg.layout, env_cfg.scenario = args.layout, args.scenario
+    env_cfg.map_source = args.map_source or ("cfd" if args.physics == "v1" else "ideal1d")
+    env_cfg.aero = env_cfg.variable_mass = args.physics == "v1"
     env_cfg.apply_scenario()
     env_cfg.__post_init__()
     env_cfg.scene.num_envs = args.num_envs
@@ -117,7 +122,7 @@ def main():
     env = VtvlEnv(env_cfg)
     manifest = {"label": "win-isaac", "argv": sys.argv, "software": versions(), "map_hash": env.map_hash,
                 "engine": env_cfg.engine, "map_source": env_cfg.map_source, "asset": env.asset_info,
-                "layout": env_cfg.layout, "scenario": env_cfg.scenario,
+                "layout": env_cfg.layout, "scenario": env_cfg.scenario, "physics": args.physics,
                 "env_cfg": {k: getattr(env_cfg, k) for k in dir(env_cfg) if k.startswith(("rew_", "phi_")) or k in ("engine_mix", 
                     "shaping", "decimation", "episode_length_s", "terminate_at_touchdown", "touchdown_height_m", "throttle0")},
                 "agent_cfg": agent.to_dict()}
